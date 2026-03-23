@@ -6473,15 +6473,40 @@ export default function PawTraxx() {
     return function() { document.removeEventListener("keydown", onKey); };
   }, [user, dogs, activeDog, highlightedDogId, focusedSection, showAdd, showEditDog, showProfile, showWelcome, showSearch, search]);
 
+  var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+  function generateToken() {
+    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+  }
+
   useEffect(function() {
-    var s = localStorage.getItem("pt_session");
-    if (s) {
-      var email = JSON.parse(s).email;
+    var raw = localStorage.getItem("pt_session");
+    if (!raw) return;
+    try {
+      var s = JSON.parse(raw);
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      if (users[email]) { 
-        setUser(users[email]); 
-        setDogs(users[email].dogs || []); 
+      var u = users[s.email];
+      if (!u) { localStorage.removeItem("pt_session"); return; }
+
+      // Check expiry
+      if (s.expiresAt && Date.now() > s.expiresAt) {
+        // Session expired - force re-login
+        localStorage.removeItem("pt_session");
+        return;
       }
+
+      // Valid session - refresh the expiry (keep active users logged in)
+      var refreshed = Object.assign({}, s, {
+        expiresAt: Date.now() + SESSION_DURATION_MS,
+        refreshToken: generateToken(),
+        lastRefreshed: new Date().toISOString()
+      });
+      localStorage.setItem("pt_session", JSON.stringify(refreshed));
+
+      setUser(u);
+      setDogs(u.dogs || []);
+    } catch(e) {
+      localStorage.removeItem("pt_session");
     }
   }, []);
 
@@ -6525,7 +6550,6 @@ export default function PawTraxx() {
   }
 
   function login(u) {
-    // Track session start
     var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var sessionEntry = { loginAt: new Date().toISOString(), logoutAt: null, duration: null };
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
@@ -6533,7 +6557,14 @@ export default function PawTraxx() {
     localStorage.setItem("pt_users", JSON.stringify(allUsers));
     var updatedUser = Object.assign({}, u, { sessions: sessions, lastLoginAt: new Date().toISOString() });
     setUser(updatedUser); setDogs(updatedUser.dogs||[]);
-    localStorage.setItem("pt_session", JSON.stringify({ email: u.email, loginAt: sessionEntry.loginAt }));
+    // Store session with 30-day expiry + refresh token
+    localStorage.setItem("pt_session", JSON.stringify({
+      email: u.email,
+      loginAt: sessionEntry.loginAt,
+      expiresAt: Date.now() + SESSION_DURATION_MS,
+      refreshToken: generateToken(),
+      lastRefreshed: new Date().toISOString()
+    }));
     setShowWelcome(true);
     requestNotifPermission();
   }
