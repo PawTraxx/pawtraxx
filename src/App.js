@@ -233,6 +233,111 @@ const CARE_TIPS = [
   "Dogs thrive on routine. Keep feeding and walk times consistent.",
 ];
 
+// Breed-specific tips lookup
+var BREED_TIPS = {
+  "Golden Retriever":       "Golden Retrievers are prone to joint issues — consider a glucosamine supplement and avoid high-impact exercise on hard surfaces.",
+  "Labrador Retriever":     "Labs love to eat — measure meals carefully and avoid free-feeding to prevent obesity.",
+  "German Shepherd":        "German Shepherds need at least 1-2 hours of exercise and mental stimulation daily to stay balanced.",
+  "French Bulldog":         "Frenchies overheat easily — avoid exercise in hot weather and never leave them in a warm car.",
+  "Bulldog":                "Bulldogs are prone to breathing issues. Keep them cool, avoid strenuous exercise, and watch for snoring changes.",
+  "Poodle (Standard)":      "Standard Poodles are highly intelligent — rotate puzzle toys and training games to keep them mentally sharp.",
+  "Poodle (Miniature)":     "Miniature Poodles are prone to dental issues — daily brushing and regular dental cleanings are important.",
+  "Poodle (Toy)":           "Toy Poodles are fragile — supervise interactions with small children and watch for hypoglycemia in puppies.",
+  "Beagle":                 "Beagles are scent-driven escape artists — always keep them on leash or in a securely fenced yard.",
+  "Rottweiler":             "Rottweilers need confident, consistent training starting early. Daily exercise and socialization are key.",
+  "Dachshund":              "Dachshunds are prone to back issues — avoid stairs and jumping on/off furniture. Keep their weight in check.",
+  "Siberian Husky":         "Huskies need extensive daily exercise. Without it they become destructive. A tired Husky is a happy Husky.",
+  "Boxer":                  "Boxers are heat sensitive and can overheat quickly. Schedule exercise during cooler parts of the day.",
+  "Yorkshire Terrier":      "Yorkies have delicate digestive systems — feed high-quality food in small, frequent meals.",
+  "Shih Tzu":               "Shih Tzus need daily facial cleaning to prevent eye discharge buildup and skin infections in skin folds.",
+  "Chihuahua":              "Chihuahuas get cold easily — consider a sweater in cool weather and watch for shivering.",
+  "Doberman Pinscher":      "Dobermans are loyal but need early socialization. Regular cardiac checkups are recommended for this breed.",
+  "Australian Shepherd":    "Australian Shepherds need a job to do — agility, herding games, or advanced training keeps them happy.",
+  "Great Dane":             "Great Danes are prone to bloat — feed smaller meals twice daily and avoid exercise right after eating.",
+  "Miniature Schnauzer":    "Mini Schnauzers are prone to pancreatitis — avoid high-fat foods and human food scraps.",
+  "Border Collie":          "Border Collies are the most intelligent breed — they need constant mental and physical challenges or they'll invent their own.",
+  "Cavalier King Charles Spaniel": "Cavaliers are prone to heart disease — regular cardiac checkups are especially important after age 5.",
+  "Pembroke Welsh Corgi":   "Corgis are prone to weight gain — measure food carefully and keep up with daily walks.",
+  "Cocker Spaniel":         "Cocker Spaniels need regular ear cleaning — their floppy ears trap moisture and are prone to infections.",
+  "Bernese Mountain Dog":   "Berners are prone to joint issues and cancer — regular vet checkups and weight management are critical.",
+  "Pug":                    "Pugs are brachycephalic — avoid heat and exercise in warm weather, and watch their weight closely.",
+  "Goldendoodle":           "Goldendoodles need regular grooming every 6-8 weeks to prevent painful matting.",
+  "Labradoodle":            "Labradoodles can inherit conditions from both parent breeds — keep up with regular vet screenings.",
+  "Mixed Breed":            "Mixed breeds often benefit from hybrid vigor, but understanding your dog's background can help predict health needs.",
+};
+
+// Season-based weather tips
+function getWeatherTip() {
+  var month = new Date().getMonth(); // 0-11
+  if (month >= 5 && month <= 8) { // June - September (summer)
+    return "☀️ Hot weather alert: Walk dogs early morning or evening when pavement is cool. If you can't hold your hand on the ground for 5 seconds, it's too hot for paws.";
+  }
+  if (month >= 11 || month <= 1) { // December - February (winter)
+    return "❄️ Cold weather tip: Small breeds and short-coated dogs may need a coat below 45°F. Wipe paws after walks to remove ice melt chemicals, which can be toxic if licked.";
+  }
+  if (month >= 2 && month <= 4) { // March - May (spring)
+    return "🌸 Spring tip: Flea and tick season is starting — make sure preventatives are up to date. Spring plants like azaleas, tulips, and daffodils can be toxic to dogs.";
+  }
+  // Fall (September - November)
+  return "🍂 Fall tip: Watch for mushrooms on walks — many wild varieties are toxic to dogs. Also check for seasonal allergies if your dog is scratching more than usual.";
+}
+
+// Behavior tip from activity log
+function getBehaviorTip(dog) {
+  var log = dog.activityLog || [];
+  var now = Date.now();
+  var last24h = log.filter(function(e){ return now - new Date(e.timestamp).getTime() < 86400000; });
+  var fedToday = last24h.filter(function(e){ return e.type === "fed"; }).length;
+  var outToday = last24h.filter(function(e){ return e.type === "outside"; }).length;
+  var age = parseFloat(dog.age) || 1;
+
+  if (fedToday === 0 && log.length > 0) {
+    return "🍽️ " + dog.name + " hasn't been logged as fed today — make sure meals are on schedule to keep energy levels steady.";
+  }
+  if (outToday === 0 && log.length > 0) {
+    return "🌳 " + dog.name + " hasn't been taken outside today. Regular outings are important for bladder health and mental stimulation.";
+  }
+  if (fedToday >= 5) {
+    return "⚠️ " + dog.name + " has been logged as fed " + fedToday + " times today. Overfeeding can lead to obesity and digestive issues.";
+  }
+  if (outToday >= 8 && age >= 3) {
+    return "🌟 Great job! " + dog.name + " has been outside " + outToday + " times today — that's excellent activity for their health and happiness.";
+  }
+  if (age < 1 && outToday < 4) {
+    return "🐶 Puppies benefit from short, frequent outings — aim for 4-6 trips outside per day to help with potty training and socialization.";
+  }
+  return null;
+}
+
+// Master tip rotation engine — one tip per 3 days, cycles through all categories
+function getActiveTip(dog) {
+  var DAY_MS = 86400000;
+  var CYCLE_DAYS = 3;
+  var epoch = new Date("2024-01-01").getTime();
+  var daysSinceEpoch = Math.floor((Date.now() - epoch) / DAY_MS);
+  var cycleIndex = Math.floor(daysSinceEpoch / CYCLE_DAYS);
+  var nextTipDate = new Date((Math.floor(daysSinceEpoch / CYCLE_DAYS) + 1) * CYCLE_DAYS * DAY_MS + epoch);
+  var daysUntilNext = Math.ceil((nextTipDate - Date.now()) / DAY_MS);
+
+  // Build tip pool: behavior (priority), breed, weather, general care
+  var pool = [];
+
+  var behaviorTip = getBehaviorTip(dog);
+  if (behaviorTip) pool.push({ type:"behavior", icon:"📊", label:"Behavior Insight", text: behaviorTip });
+
+  var breedTip = BREED_TIPS[dog.breed];
+  if (breedTip) pool.push({ type:"breed", icon:"🏷️", label:"Breed Tip · "+dog.breed, text: breedTip });
+
+  pool.push({ type:"weather", icon:"🌤️", label:"Weather Tip", text: getWeatherTip() });
+
+  CARE_TIPS.forEach(function(t) {
+    pool.push({ type:"care", icon:"🐾", label:"Care Tip", text: t });
+  });
+
+  var tip = pool[cycleIndex % pool.length];
+  return { tip: tip, daysUntilNext: daysUntilNext };
+}
+
 // rank stuff - based on points
 var TRAINER_RANKS = [
   { min:0,    label:"Wandering Paw",        icon:"🐾", color:"#94a3b8", glow:"rgba(148,163,184,0.22)",  desc:"Every journey begins with a single paw print." },
@@ -767,12 +872,15 @@ function makeAppCss(C) {
     "@media(max-width:768px){",
     "::-webkit-scrollbar{width:4px;height:4px;}",
     ".g2{grid-template-columns:1fr!important;}",
+    "html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}",
+    "body{overflow-x:hidden;min-height:100vh;min-height:-webkit-fill-available;}",
+    "html{height:-webkit-fill-available;}",
     "}",
   ].join("\n");
 }
 
 // reusable components
-function Modal({ title, onClose, children }) {
+function Modal({ title, onClose, children, titleExtra }) {
   var C = useTheme();
   useEffect(() => {
     function onKey(e) { if (e.key === "Escape") onClose(); }
@@ -783,7 +891,10 @@ function Modal({ title, onClose, children }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }} onClick={onClose}>
       <div className="fadeIn" style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:20,padding:28,width:"100%",maxWidth:560,maxHeight:"92vh",overflowY:"auto" }} onClick={function(e){e.stopPropagation();}}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22 }}>
-          <h2 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:700 }}>{title}</h2>
+          <div style={{ display:"flex",alignItems:"center",gap:10,minWidth:0 }}>
+            <h2 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:700,margin:0 }}>{title}</h2>
+            {titleExtra && titleExtra}
+          </div>
           <button className="btnI" onClick={onClose}>&#x2715;</button>
         </div>
         {children}
@@ -1418,6 +1529,18 @@ function GoogleAuthModal({ onClose, onLogin }) {
         };
         users[email] = user;
         localStorage.setItem("pt_users", JSON.stringify(users));
+        // Notify admin of new Google account registration
+        var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
+        notifications.push({
+          id: String(Date.now()),
+          type: "account_created",
+          timestamp: new Date().toISOString(),
+          userEmail: email,
+          userName: user.name,
+          authMethod: "Google",
+          message: "New account created via Google: " + user.name + " (" + email + ")"
+        });
+        localStorage.setItem("pt_admin_notifications", JSON.stringify(notifications));
       }
       // Save to google accounts list
       var gAccounts = JSON.parse(localStorage.getItem("pt_google_accounts") || "[]");
@@ -4171,13 +4294,8 @@ function BadgesTab({ dog, allDogs, setSelectedBadge }) {
 // individual dog profile page
 function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setActiveTab, focusedSection, setFocusedSection, setSelectedBadge, earnTP, setCooldownAlert }) {
   var C = useTheme();
-  var [tipPage, setTipPage] = useState(0);
   var tabBarRef = useRef(null);
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
-
-  useEffect(function() {
-    setTipPage(0);
-  }, [dog.id]);
 
   // Auto-update age based on DOB every day
   useEffect(function() {
@@ -4428,22 +4546,35 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
             </div>
           )}
           <div>
-            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-              <p className="sectionLabel" style={{ marginBottom:0 }}>General Care Tips</p>
-              <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                <span style={{ fontSize:11,color:C.muted }}>{(tipPage*4+1)+"-"+Math.min(tipPage*4+4,CARE_TIPS.length)+" of "+CARE_TIPS.length}</span>
-                <button className="btnI" onClick={function(){ setTipPage(function(p){ return p>0?p-1:Math.ceil(CARE_TIPS.length/4)-1; }); }} title="Previous tips">&#8249;</button>
-                <button className="btnI" onClick={function(){ setTipPage(function(p){ return (p+1)*4<CARE_TIPS.length?p+1:0; }); }} title="Next tips">&#8250;</button>
-              </div>
-            </div>
-            {CARE_TIPS.slice(tipPage*4, tipPage*4+4).map(function(t, i) {
+            {(function(){
+              var result = getActiveTip(dog);
+              var t = result.tip;
+              var daysLeft = result.daysUntilNext;
+              var colorMap = { behavior: C.purple, breed: C.accent, weather: C.blue, care: C.green };
+              var faintMap = { behavior: C.purpleFaint, breed: C.accentFaint, weather: C.blueFaint, care: C.greenFaint };
+              var tipColor = colorMap[t.type] || C.accent;
+              var tipFaint = faintMap[t.type] || C.accentFaint;
               return (
-                <div key={i} style={{ background:C.card,border:"1px solid "+C.accent,borderLeft:"2px solid "+C.accent,borderRadius:12,padding:"14px 18px",marginBottom:10,display:"flex",alignItems:"flex-start",gap:12 }}>
-                  <span style={{ fontSize:20,flexShrink:0,marginTop:1 }}>🐾</span>
-                  <p style={{ fontSize:15,fontWeight:600,color:C.text,lineHeight:1.65,margin:0 }}>{t}</p>
+                <div>
+                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+                    <p className="sectionLabel" style={{ marginBottom:0 }}>Tip</p>
+                    <span style={{ fontSize:11,color:C.muted,fontWeight:600 }}>
+                      {daysLeft <= 1 ? "New tip tomorrow" : "Next tip in "+daysLeft+" days"}
+                    </span>
+                  </div>
+                  <div style={{ background:tipFaint,border:"1.5px solid "+tipColor,borderRadius:14,padding:"16px 18px" }}>
+                    <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
+                      <span style={{ fontSize:18 }}>{t.icon}</span>
+                      <span style={{ fontSize:11,fontWeight:800,color:tipColor,textTransform:"uppercase",letterSpacing:".07em" }}>{t.label}</span>
+                    </div>
+                    <p style={{ fontSize:15,fontWeight:600,color:C.text,lineHeight:1.7,margin:0 }}>{t.text}</p>
+                  </div>
+                  <p style={{ fontSize:15,color:C.muted,marginTop:8,textAlign:"center" }}>
+                    One new tip every 3 days — breed tips, weather alerts, behavior insights & care reminders.
+                  </p>
                 </div>
               );
-            })}
+            })()}
           </div>
         </div>
       )}
@@ -5117,7 +5248,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
           </div>
         </div>
       )}
-      <div style={{ marginBottom:28 }}>
+      <div style={{ marginBottom:28,textAlign:"center" }}>
         <h2 style={{ fontFamily:"Fraunces",fontSize:42,fontWeight:800,color:C.text,letterSpacing:"-1px" }}><span style={{ marginRight:10 }}>&#x1F43E;</span>DogBoard<span style={{ marginLeft:10 }}>&#x1F43E;</span></h2>
         <p style={{ color:C.muted,fontSize:18,marginTop:4 }}>You have <strong style={{ color:C.accent }}>{dogs.length}</strong> dog{dogs.length!==1?"s":""} in your pack</p>
       </div>
@@ -6207,21 +6338,22 @@ function AdminDashboard({ onExit }) {
               if (!notifications.length) return <p style={{ color:C.muted,textAlign:"center",padding:40 }}>No notifications yet.</p>;
               return notifications.map(function(n){
                 var isAccountDeletion = n.type === "account_deletion";
+                var isAccountCreated = n.type === "account_created";
                 return (
-                  <div key={n.id} style={{ background:C.card,border:"2px solid "+(isAccountDeletion?C.red:C.accent),borderRadius:14,padding:14,marginBottom:12 }}>
+                  <div key={n.id} style={{ background:C.card,border:"2px solid "+(isAccountDeletion?C.red:isAccountCreated?C.green:C.accent),borderRadius:14,padding:14,marginBottom:12 }}>
                     <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8,gap:8 }}>
                       <div style={{ flex:1,minWidth:0 }}>
                         <div style={{ display:"flex",alignItems:"center",gap:6,marginBottom:4 }}>
-                          <span style={{ fontSize:16,flexShrink:0 }}>{isAccountDeletion?"🗑️":"🔔"}</span>
-                          <p style={{ fontSize:14,fontWeight:800,color:isAccountDeletion?C.red:C.text,lineHeight:1.4 }}>{n.message}</p>
+                          <span style={{ fontSize:16,flexShrink:0 }}>{isAccountDeletion?"🗑️":isAccountCreated?"✅":"🔔"}</span>
+                          <p style={{ fontSize:14,fontWeight:800,color:isAccountDeletion?C.red:isAccountCreated?C.green:C.text,lineHeight:1.4 }}>{n.message}</p>
                         </div>
-                        {isAccountDeletion && (
+                        {(isAccountDeletion || isAccountCreated) && (
                           <div style={{ background:C.bg,border:"1.5px solid "+C.border,borderRadius:10,padding:12,marginTop:8 }}>
                             {[
                               { label:"Name",    val:n.userName },
                               { label:"Email",   val:n.userEmail, col:C.accent },
-                              { label:"Phone",   val:n.userPhone },
-                              { label:"Deleted", val:fmtTimestamp(n.timestamp) },
+                              isAccountCreated ? { label:"Method", val:n.authMethod || "Email" } : { label:"Phone", val:n.userPhone },
+                              { label: isAccountDeletion ? "Deleted" : "Joined", val:fmtTimestamp(n.timestamp) },
                             ].map(function(row){
                               return (
                                 <div key={row.label} style={{ display:"flex",gap:8,marginBottom:4,alignItems:"flex-start" }}>
@@ -6393,7 +6525,22 @@ export default function PawTraxx() {
   var [upgradeModal, setUpgradeModal] = useState({ show: false, feature: "", recommendedTier: "", context: {} });
   var [showPricing, setShowPricing] = useState(false);
   var [mobileNav, setMobileNav] = useState("dogs"); // "dogs" | "board" | "trainer" | "profile"
+  var [showMobileMenu, setShowMobileMenu] = useState(false);
+  var [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   var isMobile = useIsMobile();
+
+  // Ensure proper mobile viewport scaling
+  useEffect(function() {
+    var existing = document.querySelector('meta[name="viewport"]');
+    if (!existing) {
+      var meta = document.createElement('meta');
+      meta.name = 'viewport';
+      meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+      document.head.appendChild(meta);
+    } else {
+      existing.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+    }
+  }, []);
 
   var TAB_IDS = ["overview","schedule","food","vet","vaccines","meds","weight","heat","log","badges"];
   var [focusedSection, setFocusedSection] = useState(null); // "tabs" | "dogs" | null
@@ -6785,7 +6932,7 @@ export default function PawTraxx() {
               {activeDog && (
                 <span style={{ fontFamily:"Fraunces",fontSize:16,fontWeight:800,color:C.text }}>{activeDog.name}</span>
               )}
-              <button onClick={function(){ setShowProfile(true); }}
+              <button onClick={function(){ setShowMobileMenu(true); }}
                 style={{ width:36,height:36,borderRadius:"50%",background:C.bg,border:"2px solid "+C.border,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:0,flexShrink:0 }}>
                 {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <span style={{ fontSize:17 }}>👤</span>}
               </button>
@@ -6888,11 +7035,11 @@ export default function PawTraxx() {
           {!activeDog && (
             <div style={{ position:"fixed",bottom:0,left:0,right:0,height:64,background:C.card,borderTop:"1px solid "+C.border,display:"flex",alignItems:"stretch",zIndex:500,paddingBottom:"env(safe-area-inset-bottom)" }}>
               {[
-                { id:"dogs",    icon:"🐕", label:"My Dogs" },
                 { id:"board",   icon:"📋", label:"Board"   },
+                { id:"dogs",    icon:"🐕", label:"My Dogs" },
                 { id:"add",     icon:"＋", label:"Add",  special:true },
                 { id:"trainer", icon:"🏆", label:"Trainer" },
-                { id:"signout", icon:"🚪", label:"Sign Out" },
+                { id:"profile", icon:"👤", label:"Profile" },
               ].map(function(item) {
                 if (item.special) {
                   return (
@@ -6902,12 +7049,14 @@ export default function PawTraxx() {
                     </button>
                   );
                 }
-                if (item.id === "signout") {
+                if (item.id === "profile") {
                   return (
-                    <button key="signout" onClick={logout}
+                    <button key="profile" onClick={function(){ setShowMobileMenu(true); }}
                       style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:2,background:"none",border:"none",cursor:"pointer",WebkitTapHighlightColor:"transparent" }}>
-                      <span style={{ fontSize:20 }}>{item.icon}</span>
-                      <span style={{ fontSize:10,fontWeight:600,color:C.red }}>{item.label}</span>
+                      <div style={{ width:26,height:26,borderRadius:"50%",overflow:"hidden",border:"2px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14 }}>
+                        {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <span>👤</span>}
+                      </div>
+                      <span style={{ fontSize:10,fontWeight:500,color:C.muted }}>{item.label}</span>
                     </button>
                   );
                 }
@@ -6921,6 +7070,60 @@ export default function PawTraxx() {
                   </button>
                 );
               })}
+            </div>
+          )}
+
+          {/* Mobile menu sheet */}
+          {showMobileMenu && (
+            <div style={{ position:"fixed",inset:0,zIndex:9000 }}
+              onClick={function(){ setShowMobileMenu(false); }}>
+              {/* Backdrop */}
+              <div style={{ position:"absolute",inset:0,background:"rgba(0,0,0,0.5)" }} />
+              {/* Sheet */}
+              <div className="fadeIn" style={{ position:"absolute",bottom:0,left:0,right:0,background:C.card,borderRadius:"20px 20px 0 0",padding:"20px 20px 40px",boxShadow:"0 -8px 40px rgba(0,0,0,0.3)" }}
+                onClick={function(e){ e.stopPropagation(); }}>
+                {/* Handle bar */}
+                <div style={{ width:40,height:4,background:C.border,borderRadius:99,margin:"0 auto 20px" }} />
+                {/* User info */}
+                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:20,paddingBottom:20,borderBottom:"1px solid "+C.border }}>
+                  <div style={{ width:52,height:52,borderRadius:"50%",overflow:"hidden",border:"2px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:24,flexShrink:0 }}>
+                    {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : "👤"}
+                  </div>
+                  <div>
+                    <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.name}</p>
+                    <p style={{ fontSize:13,color:C.muted }}>{user.email}</p>
+                  </div>
+                </div>
+                {/* Menu options */}
+                <button onClick={function(){ setShowMobileMenu(false); setShowProfile(true); }}
+                  style={{ width:"100%",display:"flex",alignItems:"center",gap:14,padding:"14px 0",background:"none",border:"none",cursor:"pointer",color:C.text,textAlign:"left" }}>
+                  <span style={{ fontSize:22,width:32,textAlign:"center" }}>✏️</span>
+                  <span style={{ fontSize:16,fontWeight:600 }}>Edit Profile</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Sign out confirmation */}
+          {showSignOutConfirm && (
+            <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9001,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
+              <div className="fadeIn" style={{ background:C.card,borderRadius:20,padding:28,width:"100%",maxWidth:340,boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
+                <div style={{ textAlign:"center",marginBottom:20 }}>
+                  <div style={{ fontSize:44,marginBottom:12 }}>🚪</div>
+                  <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text,marginBottom:8 }}>Sign Out?</p>
+                  <p style={{ fontSize:14,color:C.muted,lineHeight:1.6 }}>You'll need to sign back in to access your account.</p>
+                </div>
+                <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                  <button onClick={function(){ setShowSignOutConfirm(false); logout(); }}
+                    style={{ width:"100%",background:C.red,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:700,cursor:"pointer" }}>
+                    Yes, Sign Out
+                  </button>
+                  <button onClick={function(){ setShowSignOutConfirm(false); }}
+                    style={{ width:"100%",background:"transparent",border:"1.5px solid "+C.border,color:C.text,borderRadius:12,padding:"14px",fontSize:16,fontWeight:600,cursor:"pointer" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -7174,7 +7377,12 @@ export default function PawTraxx() {
         </div>
       )}
       {showProfile && (
-        <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }}>
+        <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
+          <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
+            style={{ background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>
+            🚪 Sign Out
+          </button>
+        }>
           <div style={{ marginBottom:22 }}>
             <PhotoUpload
               current={user.photo}
