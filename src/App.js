@@ -264,12 +264,46 @@ var TP_VALUES = {
 
 // Cooldown periods (in milliseconds) to prevent TP farming
 var COOLDOWNS = {
-  fed: 4 * 3600000,        // 4 hours - realistic feeding interval
-  outside: 2 * 3600000,    // 2 hours - reasonable outdoor break frequency
+  fed: 4 * 3600000,        // 4 hours - default (overridden by age below)
+  outside: 2 * 3600000,    // 2 hours - default (overridden by age below)
   weight: 24 * 3600000,    // 24 hours - once per day max
   med_given: 3600000,      // 1 hour - minimum between medication doses
   heat_log: 24 * 3600000,  // 24 hours - once per day max
 };
+
+// Age-based cooldowns for fed and outside
+// Puppies need more frequent attention than adults or seniors
+function getFedCooldown(dog) {
+  var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
+  if (isNaN(age)) age = 1;
+  if (age < 0.083) return 0.5  * 3600000; // Under 1 month: every 30 minutes
+  if (age < 0.5)  return 1.5 * 3600000; // Under 6 months: every 1.5 hours
+  if (age < 1)    return 2   * 3600000; // 6-12 months: every 2 hours
+  if (age < 3)    return 3   * 3600000; // 1-3 years: every 3 hours
+  if (age < 8)    return 4   * 3600000; // Adult: every 4 hours
+  return           5   * 3600000;        // Senior 8+: every 5 hours
+}
+
+function getOutsideCooldown(dog) {
+  var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
+  if (isNaN(age)) age = 1;
+  if (age < 0.5)  return 0.5  * 3600000; // Under 6 months: every 30 min
+  if (age < 1)    return 1    * 3600000; // 6-12 months: every 1 hour
+  if (age < 3)    return 1.5  * 3600000; // 1-3 years: every 1.5 hours
+  if (age < 8)    return 2    * 3600000; // Adult: every 2 hours
+  return           3    * 3600000;        // Senior 8+: every 3 hours
+}
+
+function getCooldownLabel(dog) {
+  var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
+  if (isNaN(age)) age = 1;
+  if (age < 0.083) return "Newborn (under 1 mo)";
+  if (age < 0.5) return "Puppy (under 6 mo)";
+  if (age < 1)   return "Puppy (6–12 mo)";
+  if (age < 3)   return "Young adult";
+  if (age < 8)   return "Adult";
+  return "Senior";
+}
 
 // ═══════════════════════════════════════════════════════════════
 // TIER SYSTEM - Progressive with Action Limits (Hybrid Model)
@@ -4258,13 +4292,13 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
 
       <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20 }}>
         <button onClick={function(){
-          // Check cooldown using separate timestamp (not deletable)
           var cooldownTimestamps = dog.cooldownTimestamps || {};
           var lastFedCooldown = cooldownTimestamps.fed;
-          var fedCooldown = isOnCooldown(lastFedCooldown, COOLDOWNS.fed);
+          var fedCooldownMs = getFedCooldown(dog);
+          var fedCooldown = isOnCooldown(lastFedCooldown, fedCooldownMs);
           
           if (fedCooldown) {
-            var remaining = getCooldownRemaining(lastFedCooldown, COOLDOWNS.fed);
+            var remaining = getCooldownRemaining(lastFedCooldown, fedCooldownMs);
             setCooldownAlert({
               show: true,
               message: "You recently fed " + dog.name + "! To prevent rapid logging and ensure accurate tracking, please wait before marking them as fed again.",
@@ -4276,8 +4310,6 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           var ts = new Date().toISOString();
           var entry = { id: String(Date.now()), type:"fed", timestamp: ts };
           var log = (dog.activityLog || []).concat([entry]);
-          
-          // Update both activity log AND cooldown timestamp
           var updatedCooldowns = Object.assign({}, cooldownTimestamps, { fed: ts });
           onUpdate(Object.assign({},dog,{ lastFed: ts, activityLog: log, cooldownTimestamps: updatedCooldowns }));
           if (earnTP) earnTP(TP_VALUES.fed, "Fed "+dog.name);
@@ -4288,15 +4320,16 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>🍽️</div>
           <div style={{ fontWeight:600,fontSize:14,marginTop:4 }}>Mark as Fed</div>
           <div style={{ fontSize:13,color:C.green,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastFed)}</div>
+          <div style={{ fontSize:11,color:C.muted,marginTop:1 }}>{getCooldownLabel(dog)+" · every "+(getFedCooldown(dog)/3600000)+"h"}</div>
         </button>
         <button onClick={function(){
-          // Check cooldown using separate timestamp (not deletable)
           var cooldownTimestamps = dog.cooldownTimestamps || {};
           var lastOutsideCooldown = cooldownTimestamps.outside;
-          var outCooldown = isOnCooldown(lastOutsideCooldown, COOLDOWNS.outside);
+          var outCooldownMs = getOutsideCooldown(dog);
+          var outCooldown = isOnCooldown(lastOutsideCooldown, outCooldownMs);
           
           if (outCooldown) {
-            var remaining = getCooldownRemaining(lastOutsideCooldown, COOLDOWNS.outside);
+            var remaining = getCooldownRemaining(lastOutsideCooldown, outCooldownMs);
             setCooldownAlert({
               show: true,
               message: "You recently took " + dog.name + " outside! To prevent rapid logging and ensure accurate tracking, please wait before marking them as outside again.",
@@ -4308,8 +4341,6 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           var ts = new Date().toISOString();
           var entry = { id: String(Date.now()), type:"outside", timestamp: ts };
           var log = (dog.activityLog || []).concat([entry]);
-          
-          // Update both activity log AND cooldown timestamp
           var updatedCooldowns = Object.assign({}, cooldownTimestamps, { outside: ts });
           onUpdate(Object.assign({},dog,{ lastOutside: ts, activityLog: log, cooldownTimestamps: updatedCooldowns }));
           if (earnTP) earnTP(TP_VALUES.outside, "Took "+dog.name+" outside");
@@ -4320,6 +4351,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>🌳</div>
           <div style={{ fontWeight:600,fontSize:14,marginTop:4 }}>Taken Outside</div>
           <div style={{ fontSize:13,color:C.blue,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastOutside)}</div>
+          <div style={{ fontSize:11,color:C.muted,marginTop:1 }}>{getCooldownLabel(dog)+" · every "+(getOutsideCooldown(dog)/3600000)+"h"}</div>
         </button>
       </div>
 
@@ -4909,8 +4941,8 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
   var [focusedIndex, setFocusedIndex] = useState(0);
   var [showPackDocs, setShowPackDocs] = useState(false);
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
-  var needsFeed = dogs.filter(function(d){ return !d.lastFed || (Date.now()-new Date(d.lastFed))>7*3600000; });
-  var needsOut = dogs.filter(function(d){ return !d.lastOutside || (Date.now()-new Date(d.lastOutside))>6*3600000; });
+  var needsFeed = dogs.filter(function(d){ return !d.lastFed || (Date.now()-new Date(d.lastFed)) > getFedCooldown(d); });
+  var needsOut = dogs.filter(function(d){ return !d.lastOutside || (Date.now()-new Date(d.lastOutside)) > getOutsideCooldown(d); });
   var heatAlert = dogs.filter(function(d){ if(d.gender!=="female"||!d.lastHeatDate)return false; var h=getHeatStatus(d); return h&&(h.upcoming||h.inHeat); });
   var ovVaxDogs = dogs.filter(function(d){ return (d.vaccines||[]).some(function(v){ return v.nextDate&&isOverdue(v.nextDate); }); });
   var upAppts = dogs.reduce(function(acc,d){ return acc.concat((d.vetAppointments||[]).filter(function(a){ var du=daysUntil(a.date); return du>=0&&du<=7; }).map(function(a){ return Object.assign({},a,{dog:d}); })); },[]).sort(function(a,b){ return parseLocalDate(a.date) - parseLocalDate(b.date); });
@@ -5158,10 +5190,11 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                           <button className="btnP" style={{ fontSize:13,padding:"6px 12px" }} onClick={function(){
                             var cooldownTimestamps = d.cooldownTimestamps || {};
                             var lastFedCooldown = cooldownTimestamps.fed;
-                            var fedCooldown = isOnCooldown(lastFedCooldown, COOLDOWNS.fed);
+                            var fedCooldownMs = getFedCooldown(d);
+                            var fedCooldown = isOnCooldown(lastFedCooldown, fedCooldownMs);
                             
                             if (fedCooldown) {
-                              var remaining = getCooldownRemaining(lastFedCooldown, COOLDOWNS.fed);
+                              var remaining = getCooldownRemaining(lastFedCooldown, fedCooldownMs);
                               setCooldownAlert({
                                 show: true,
                                 message: "You recently fed " + d.name + "! To prevent rapid logging and ensure accurate tracking, please wait before marking them as fed again.",
@@ -5198,10 +5231,11 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                           <button onClick={function(){
                             var cooldownTimestamps = d.cooldownTimestamps || {};
                             var lastOutsideCooldown = cooldownTimestamps.outside;
-                            var outCooldown = isOnCooldown(lastOutsideCooldown, COOLDOWNS.outside);
+                            var outCooldownMs = getOutsideCooldown(d);
+                            var outCooldown = isOnCooldown(lastOutsideCooldown, outCooldownMs);
                             
                             if (outCooldown) {
-                              var remaining = getCooldownRemaining(lastOutsideCooldown, COOLDOWNS.outside);
+                              var remaining = getCooldownRemaining(lastOutsideCooldown, outCooldownMs);
                               setCooldownAlert({
                                 show: true,
                                 message: "You recently took " + d.name + " outside! To prevent rapid logging and ensure accurate tracking, please wait before marking them as outside again.",
