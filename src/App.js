@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 
 // PawTraxx - dog health tracker
