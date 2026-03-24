@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { useAuth } from "@/lib/AuthContext";
+import { useAuth } from "../lib/AuthContext"; // FIXED PATH
 
 export default function PawTraksPage() {
   const { user } = useAuth();
@@ -43,12 +43,11 @@ export default function PawTraksPage() {
   const htmlDoc = useMemo(() => {
     if (!ready) return "";
 
-    return `
-<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PawTraks</title>
 <style>
   body { margin:0; background:#0c0e16; color:#f4a24d; font-family:sans-serif; }
@@ -65,8 +64,8 @@ export default function PawTraksPage() {
 fetch("${srcUrl}")
   .then(r => r.text())
   .then(code => {
-    code = code.replace(/\/\*\s*eslint-disable\s*\*\//, "");
-    code = code.replace(/import\s*\{([^}]+)\}\s*from\s*["']react["'];?/, "var {$1} = React;");
+    code = code.replace(/\/\*\s*eslint-disable\s*\*\//g, "");
+    code = code.replace(/import\s*\{([^}]+)\}\s*from\s*['"]react['"];?/g, "var {$1} = React;");
     code = code.replace(/export\s+default\s+function\s+PawTraks/, "function PawTraks");
 
     code += "\nconst root = ReactDOM.createRoot(document.getElementById('root')); root.render(React.createElement(PawTraks));";
@@ -83,12 +82,11 @@ fetch("${srcUrl}")
   });
 </script>
 </body>
-</html>
-`;
+</html>`;
   }, [ready]);
 
   if (!ready) {
-    return <div>Preparing PawTraks...</div>;
+    return <div style={{ color: "#f4a24d" }}>Preparing PawTraks...</div>;
   }
 
   return (
