@@ -7557,7 +7557,7 @@ export default function PawTraxx() {
             <button className="btnG" onClick={function(){ setShowProfile(false); }}>Cancel</button>
           </div>
           <div style={{ borderTop:"1px solid "+C.border,paddingTop:18 }}>
-            <p style={{ fontSize:15,fontWeight:700,color:C.red,marginBottom:10,opacity:0.85 }}>Danger Zone</p>
+            <p style={{ fontSize:15,fontWeight:900,color:C.red,marginBottom:10,opacity:0.85 }}>Danger Zone</p>
             <DeleteProfileButton C={C} onDelete={function(){
               // Save user info before deletion for notifications
               var deletedUserEmail = user.email;
