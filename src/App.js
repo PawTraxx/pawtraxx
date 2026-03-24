@@ -218,6 +218,26 @@ const HEAT_TIPS = [
   "She may be more affectionate or irritable, so give extra patience and attention.",
   "Keep all outdoor trips on-leash as her scent attracts males from far away.",
   "This is a good time to confirm microchipping and ID tags are up to date.",
+  "Avoid dog parks and doggy daycare entirely during her heat cycle.",
+  "Males can smell a female in heat from up to 3 miles away — be extra vigilant.",
+  "A bloody discharge is normal in the first stage — it gradually lightens over 9 days.",
+  "The most fertile period is days 9–14 of the cycle — the highest risk window.",
+  "Keep her separate from male dogs in the home, even if neutered.",
+  "Provide a quiet, comfortable space if she seems anxious or restless.",
+  "Track the start date every cycle to predict future heats more accurately.",
+  "Some dogs experience a false pregnancy after heat — watch for nesting behavior.",
+  "Appetite may decrease during heat — don't force feeding if she's not hungry.",
+  "A warm compress on the belly can ease cramp-like discomfort.",
+  "Swelling of the vulva is normal and will resolve after the cycle ends.",
+  "Avoid swimming in public areas — scent can still spread in water.",
+  "Check in with your vet if the cycle lasts longer than 3–4 weeks.",
+  "Keep a log of cycle length and symptoms to share with your vet.",
+  "Spaying before the first or second heat significantly reduces cancer risk.",
+  "Stress can make heat symptoms worse — keep her routine as normal as possible.",
+  "If she's whining excessively, distract her with calm activities and chew toys.",
+  "Washing her hindquarters gently with a warm cloth helps keep her comfortable.",
+  "Chlorophyll tablets can help reduce the scent — ask your vet about dosing.",
+  "A heat cycle that stops and starts unexpectedly should be evaluated by a vet.",
 ];
 
 const CARE_TIPS = [
@@ -231,6 +251,47 @@ const CARE_TIPS = [
   "Scheduled meals (not free-feeding) help prevent obesity.",
   "Regular grooming prevents mats and helps detect skin issues early.",
   "Dogs thrive on routine. Keep feeding and walk times consistent.",
+  "Trim nails every 3-4 weeks — overgrown nails cause pain and posture problems.",
+  "Clean ears weekly with a vet-approved solution to prevent infections.",
+  "Fresh water should be available 24/7 — wash the bowl daily.",
+  "Spaying or neutering reduces the risk of certain cancers and behavioral issues.",
+  "Socialization in puppyhood shapes a dog's temperament for life.",
+  "Dogs can get sunburned — apply pet-safe sunscreen on exposed skin in summer.",
+  "Never leave a dog in a parked car — temperatures rise dangerously fast.",
+  "A properly fitted collar should allow two fingers to slip underneath.",
+  "Check paws after every walk for cuts, thorns, or ice melt chemicals.",
+  "Rotate toys regularly to keep your dog mentally engaged.",
+  "Training isn't just for puppies — older dogs benefit from learning new commands.",
+  "Watch for changes in drinking or urinating habits — they can signal health issues.",
+  "Dogs need at least 30–60 minutes of aerobic exercise daily.",
+  "A dog that suddenly becomes aggressive may be in pain — see your vet.",
+  "Puppies need 18–20 hours of sleep per day — resist over-stimulating them.",
+  "Senior dogs benefit from orthopedic beds to ease joint pressure.",
+  "Chocolate, grapes, onions, and xylitol are toxic to dogs — keep them out of reach.",
+  "Positive reinforcement is proven to be more effective than punishment.",
+  "Brush your dog before bathing — matted fur gets worse when wet.",
+  "Anxiety wraps like Thundershirts can calm dogs during storms or fireworks.",
+  "Omega-3 fatty acids support coat health, joint function, and brain health.",
+  "Dogs should not share human medication — even common drugs can be fatal.",
+  "Regularly check your dog's body for lumps, bumps, or changes in skin.",
+  "Crate training gives dogs a safe space and reduces separation anxiety.",
+  "Avoid retractable leashes — they can cause rope burns and give poor control.",
+  "A tired dog is a well-behaved dog — exercise before alone time reduces anxiety.",
+  "Teach your dog a solid recall command — it could save their life one day.",
+  "Blueberries, carrots, and watermelon (no seeds) make great low-calorie treats.",
+  "Dental chews can help reduce plaque but don't replace brushing.",
+  "Introduce new foods gradually to avoid digestive upset.",
+  "Dogs read body language more than words — stay calm and consistent.",
+  "If your dog is limping after exercise, rest and vet evaluation are needed.",
+  "Anal glands should be checked at grooming appointments — full ones cause scooting.",
+  "Dogs with flat faces need extra care in heat and should never be over-exerted.",
+  "A dog that eats grass occasionally is normal — but excessive grass-eating may signal nausea.",
+  "Keep your dog's microchip information updated when you move or change numbers.",
+  "Regular weight checks help catch health changes early — log it monthly.",
+  "A shiny coat and clear eyes are signs of a well-nourished dog.",
+  "Never punish a dog for something that happened more than a few seconds ago.",
+  "Dogs dream during REM sleep — twitching and soft barking are completely normal.",
+  "Frozen Kongs stuffed with peanut butter are great for mental enrichment.",
 ];
 
 // Breed-specific tips lookup
@@ -264,23 +325,68 @@ var BREED_TIPS = {
   "Goldendoodle":           "Goldendoodles need regular grooming every 6-8 weeks to prevent painful matting.",
   "Labradoodle":            "Labradoodles can inherit conditions from both parent breeds — keep up with regular vet screenings.",
   "Mixed Breed":            "Mixed breeds often benefit from hybrid vigor, but understanding your dog's background can help predict health needs.",
+  "Shiba Inu":              "Shiba Inus are escape artists and can be cat-like in independence — a securely fenced yard is a must.",
+  "Maltese":                "Maltese are prone to tear staining — clean under the eyes daily and ask your vet about prevention.",
+  "Boston Terrier":         "Boston Terriers are sensitive to heat and cold — keep them indoors in extreme temperatures.",
+  "Pomeranian":             "Pomeranians can develop tracheal collapse — use a harness instead of a collar for walks.",
+  "Shetland Sheepdog":      "Shelties are vocal and energetic — channel their herding instinct with agility or advanced obedience.",
+  "Havanese":               "Havanese need daily brushing to prevent mats. They thrive on human companionship and hate being left alone.",
+  "Bichon Frise":           "Bichons are hypoallergenic but need regular grooming to keep their coat healthy and mat-free.",
+  "Maltipoo":               "Maltipoos can suffer from anxiety — establish a strong routine and use crate training early.",
+  "German Shorthaired Pointer": "GSPs are high-energy sporting dogs — they need vigorous daily exercise or they'll become destructive.",
+  "Weimaraner":             "Weimaraners bond deeply and suffer from separation anxiety — crate training and gradual alone time is essential.",
+  "Vizsla":                 "Vizslas are nicknamed 'velcro dogs' — they need lots of human interaction and daily running.",
+  "Irish Setter":           "Irish Setters are energetic and sensitive — use gentle positive training and give them room to run.",
+  "Basset Hound":           "Basset Hounds are prone to ear infections and obesity — clean ears weekly and measure every meal.",
+  "Saint Bernard":          "Saint Bernards drool heavily and are prone to bloat — use a raised food bowl and avoid post-meal exercise.",
+  "Akita":                  "Akitas are independent and can be dog-aggressive — early socialization and a firm, consistent owner are essential.",
+  "Chow Chow":              "Chow Chows are prone to overheating due to their thick coat — limit outdoor activity in summer.",
+  "Samoyed":                "Samoyeds blow their coat twice a year — daily brushing during shedding season prevents matting.",
+  "Alaskan Malamute":       "Malamutes are built for cold weather and can overheat easily — never exercise them in the midday heat.",
+  "Bloodhound":             "Bloodhounds have sensitive ears and skin folds — clean their ears and face wrinkles weekly.",
+  "Bull Terrier":           "Bull Terriers can develop obsessive behaviors — keep them mentally stimulated with tasks and training.",
+  "Pointer":                "Pointers need high-intensity daily exercise — a short walk won't cut it for this working breed.",
+  "Whippet":                "Whippets have almost no body fat and thin skin — they need a coat in cold weather and soft bedding.",
+  "Greyhound":              "Greyhounds are sprinters, not distance runners — short bursts of speed in a fenced area is ideal.",
+  "Jack Russell Terrier":   "Jack Russells are fearless and tenacious — they need firm boundaries and plenty of mental stimulation.",
+  "Rhodesian Ridgeback":    "Ridgebacks are independent and strong-willed — consistent training from a young age is essential.",
+  "Dalmatian":              "Dalmatians are prone to deafness and urinary issues — regular vet checks and a low-purine diet help.",
+  "Old English Sheepdog":   "OES require extensive grooming — professional grooming every 6-8 weeks prevents painful matting.",
+  "Newfoundland":           "Newfoundlands drool heavily and are prone to bloat and joint issues — keep weight in check.",
+  "Scottish Terrier":       "Scotties are stubborn but loyal — early training works best. They're also prone to Scottie Cramp syndrome.",
+  "West Highland White Terrier": "Westies are prone to skin allergies — avoid harsh shampoos and see your vet if scratching is chronic.",
+  "Soft Coated Wheaten Terrier": "Wheatens are prone to protein-losing diseases — regular blood work helps catch problems early.",
+  "Chinese Shar-Pei":       "Shar-Peis need weekly cleaning of their deep skin folds to prevent bacterial infections.",
+  "English Bulldog":        "English Bulldogs are prone to cherry eye and skin fold dermatitis — clean folds daily and watch their eyes.",
 };
 
-// Season-based weather tips
-function getWeatherTip() {
-  var month = new Date().getMonth(); // 0-11
-  if (month >= 5 && month <= 8) { // June - September (summer)
-    return "☀️ Hot weather alert: Walk dogs early morning or evening when pavement is cool. If you can't hold your hand on the ground for 5 seconds, it's too hot for paws.";
-  }
-  if (month >= 11 || month <= 1) { // December - February (winter)
-    return "❄️ Cold weather tip: Small breeds and short-coated dogs may need a coat below 45°F. Wipe paws after walks to remove ice melt chemicals, which can be toxic if licked.";
-  }
-  if (month >= 2 && month <= 4) { // March - May (spring)
-    return "🌸 Spring tip: Flea and tick season is starting — make sure preventatives are up to date. Spring plants like azaleas, tulips, and daffodils can be toxic to dogs.";
-  }
-  // Fall (September - November)
-  return "🍂 Fall tip: Watch for mushrooms on walks — many wild varieties are toxic to dogs. Also check for seasonal allergies if your dog is scratching more than usual.";
-}
+// Season-based weather tips — expanded with multiple per season
+var ALL_WEATHER_TIPS = [
+  // Summer
+  "☀️ Hot weather alert: Walk dogs early morning or evening when pavement is cool. If you can't hold your hand on the ground for 5 seconds, it's too hot for paws.",
+  "☀️ In hot weather, always bring fresh water on walks. Dogs can dehydrate quickly — offer water every 15–20 minutes.",
+  "☀️ Watch for heat stroke signs: excessive panting, drooling, red gums, or collapse. Move them to shade and cool with wet towels immediately.",
+  "☀️ Short-nosed breeds like Bulldogs and Pugs are at highest risk in heat — limit their outdoor time to early morning and evening.",
+  "☀️ Cooling mats, a kiddie pool, and frozen treats are great ways to keep dogs comfortable during summer heat.",
+  // Winter
+  "❄️ Cold weather tip: Small breeds and short-coated dogs may need a coat below 45°F. Wipe paws after walks to remove ice melt chemicals.",
+  "❄️ Dogs can get hypothermia — limit time outside in freezing temperatures and watch for shivering, weakness, or slow movement.",
+  "❄️ Rock salt and ice melt products are toxic if licked — rinse and dry paws thoroughly after every winter walk.",
+  "❄️ Keep water bowls from freezing if your dog spends time outdoors — dehydration is a risk in winter too.",
+  "❄️ Antifreeze has a sweet taste that attracts dogs but is extremely toxic — clean up any spills in the garage immediately.",
+  // Spring
+  "🌸 Spring tip: Flea and tick season is starting — make sure preventatives are up to date before the first warm day.",
+  "🌸 Spring plants like azaleas, tulips, daffodils, and sago palms are toxic to dogs — check your yard before letting them roam.",
+  "🌸 Allergies peak in spring — if your dog is scratching, rubbing their face, or sneezing more than usual, a vet visit may help.",
+  "🌸 Puddles and standing water in spring can carry leptospirosis and giardia — discourage your dog from drinking from them.",
+  "🌸 As the days get longer, it's a great time to reestablish a solid exercise routine after quieter winter months.",
+  // Fall
+  "🍂 Fall tip: Watch for mushrooms on walks — many wild varieties are toxic to dogs. If your dog eats one, call your vet immediately.",
+  "🍂 Acorns and horse chestnuts are toxic to dogs — rake them up from your yard and watch during fall walks.",
+  "🍂 As temperatures drop, older dogs with arthritis may slow down and seem stiff — discuss pain management options with your vet.",
+  "🍂 Halloween candy — especially chocolate and xylitol in sugar-free products — is highly toxic. Keep it well out of reach.",
+  "🍂 Shorter days mean more walks in the dark — use a reflective collar or a clip-on light to stay visible to cars.",
+];
 
 // Behavior tip from activity log
 function getBehaviorTip(dog) {
@@ -328,7 +434,9 @@ function getActiveTip(dog) {
   var breedTip = BREED_TIPS[dog.breed];
   if (breedTip) pool.push({ type:"breed", icon:"🏷️", label:"Breed Tip · "+dog.breed, text: breedTip });
 
-  pool.push({ type:"weather", icon:"🌤️", label:"Weather Tip", text: getWeatherTip() });
+  ALL_WEATHER_TIPS.forEach(function(t) {
+    pool.push({ type:"weather", icon:"🌤️", label:"Weather Tip", text: t });
+  });
 
   CARE_TIPS.forEach(function(t) {
     pool.push({ type:"care", icon:"🐾", label:"Care Tip", text: t });
@@ -891,11 +999,11 @@ function Modal({ title, onClose, children, titleExtra }) {
     <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,.8)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }} onClick={onClose}>
       <div className="fadeIn" style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:20,padding:28,width:"100%",maxWidth:560,maxHeight:"92vh",overflowY:"auto" }} onClick={function(e){e.stopPropagation();}}>
         <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22 }}>
-          <div style={{ display:"flex",alignItems:"center",gap:10,minWidth:0 }}>
-            <h2 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:700,margin:0 }}>{title}</h2>
+          <h2 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:700,margin:0 }}>{title}</h2>
+          <div style={{ display:"flex",alignItems:"center",gap:10 }}>
             {titleExtra && titleExtra}
+            <button className="btnI" onClick={onClose}>&#x2715;</button>
           </div>
-          <button className="btnI" onClick={onClose}>&#x2715;</button>
         </div>
         {children}
       </div>
@@ -1529,6 +1637,12 @@ function GoogleAuthModal({ onClose, onLogin }) {
         };
         users[email] = user;
         localStorage.setItem("pt_users", JSON.stringify(users));
+        // Send welcome email
+        sendSimulatedEmail(
+          email,
+          "Welcome to PawTraxx! 🐾",
+          "Hi "+user.name+",\n\nYour PawTraxx account has been created successfully via Google.\n\nEmail: "+email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraxx Team"
+        );
         // Notify admin of new Google account registration
         var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
         notifications.push({
@@ -3246,7 +3360,6 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
 function HeatTab({ dog, onUpdate, earnTP }) {
   var C = useTheme();
   var [heatDate, setHeatDate] = useState(dog.lastHeatDate || "");
-  var [heatTipPage, setHeatTipPage] = useState(0);
   var heat = getHeatStatus(dog);
 
   function saveDate() {
@@ -3302,22 +3415,36 @@ function HeatTab({ dog, onUpdate, earnTP }) {
       </div>
 
       <div>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-          <p className="sectionLabel" style={{ color:C.pink,marginBottom:0 }}>Heat Cycle Tips</p>
-          <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-            <span style={{ fontSize:11,color:C.muted }}>{(heatTipPage*4+1)+"-"+Math.min(heatTipPage*4+4,HEAT_TIPS.length)+" of "+HEAT_TIPS.length}</span>
-            <button className="btnI" onClick={function(){ setHeatTipPage(function(p){ return p>0?p-1:Math.ceil(HEAT_TIPS.length/4)-1; }); }} title="Previous tips">&#8249;</button>
-            <button className="btnI" onClick={function(){ setHeatTipPage(function(p){ return (p+1)*4<HEAT_TIPS.length?p+1:0; }); }} title="Next tips">&#8250;</button>
-          </div>
-        </div>
-        {HEAT_TIPS.slice(heatTipPage*4, heatTipPage*4+4).map(function(t, i) {
+        {(function(){
+          var DAY_MS = 86400000;
+          var CYCLE_DAYS = 3;
+          var epoch = new Date("2024-01-01").getTime();
+          var daysSinceEpoch = Math.floor((Date.now() - epoch) / DAY_MS);
+          var cycleIndex = Math.floor(daysSinceEpoch / CYCLE_DAYS);
+          var nextTipDate = new Date((Math.floor(daysSinceEpoch / CYCLE_DAYS) + 1) * CYCLE_DAYS * DAY_MS + epoch);
+          var daysUntilNext = Math.ceil((nextTipDate - Date.now()) / DAY_MS);
+          var tip = HEAT_TIPS[cycleIndex % HEAT_TIPS.length];
           return (
-            <div key={i} style={{ background:C.card,border:"1px solid "+C.accent,borderLeft:"2px solid "+C.pink,borderRadius:12,padding:"14px 18px",marginBottom:10,display:"flex",alignItems:"flex-start",gap:12 }}>
-              <span style={{ fontSize:20,flexShrink:0,marginTop:1 }}>🌸</span>
-              <p style={{ fontSize:15,fontWeight:600,color:C.text,lineHeight:1.65,margin:0 }}>{t}</p>
+            <div>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
+                <p className="sectionLabel" style={{ color:C.pink,marginBottom:0 }}>Heat Cycle Tips</p>
+                <span style={{ fontSize:11,color:C.muted,fontWeight:600 }}>
+                  {daysUntilNext <= 1 ? "New tip tomorrow" : "Next tip in "+daysUntilNext+" days"}
+                </span>
+              </div>
+              <div style={{ background:C.pinkFaint,border:"1.5px solid "+C.pink,borderRadius:14,padding:"16px 18px" }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
+                  <span style={{ fontSize:18 }}>🌸</span>
+                  <span style={{ fontSize:11,fontWeight:800,color:C.pink,textTransform:"uppercase",letterSpacing:".07em" }}>Heat Cycle Tip</span>
+                </div>
+                <p style={{ fontSize:15,fontWeight:600,color:C.text,lineHeight:1.7,margin:0 }}>{tip}</p>
+              </div>
+              <p style={{ fontSize:15,color:C.muted,marginTop:8,textAlign:"center" }}>
+                One new tip every 3 days.
+              </p>
             </div>
           );
-        })}
+        })()}
       </div>
     </div>
   );
@@ -7379,8 +7506,8 @@ export default function PawTraxx() {
       {showProfile && (
         <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
           <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
-            style={{ background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap" }}>
-            🚪 Sign Out
+            style={{ background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",textAlign:"center" }}>
+            Sign Out
           </button>
         }>
           <div style={{ marginBottom:22 }}>
