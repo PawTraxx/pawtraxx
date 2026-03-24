@@ -1,7 +1,7 @@
 /* eslint-disable */
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from "react";
 
-// PawTraxx - dog health tracker
+// PawTraks - dog health tracker
 // TODO: add Apple sign in at some point
 // TODO: look into push notifications for vaccine reminders
 
@@ -1640,8 +1640,8 @@ function GoogleAuthModal({ onClose, onLogin }) {
         // Send welcome email
         sendSimulatedEmail(
           email,
-          "Welcome to PawTraxx! 🐾",
-          "Hi "+user.name+",\n\nYour PawTraxx account has been created successfully via Google.\n\nEmail: "+email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraxx Team"
+          "Welcome to PawTraks! 🐾",
+          "Hi "+user.name+",\n\nYour PawTraks account has been created successfully via Google.\n\nEmail: "+email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
         );
         // Notify admin of new Google account registration
         var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
@@ -1719,7 +1719,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
           ) : (
             <>
               <p style={{ color:"#202124",fontSize:24,fontWeight:400,marginBottom:8,letterSpacing:"-0.5px" }}>Sign in</p>
-              <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>Continue to PawTraxx</p>
+              <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>Continue to PawTraks</p>
             </>
           )}
         </div>
@@ -1765,7 +1765,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
           <div style={{ padding:"16px 40px 28px",display:"flex",justifyContent: step==="pick" ? "space-between" : "flex-end",alignItems:"center",borderTop:"1px solid #e8eaed" }}>
             {step === "pick" && (
               <p style={{ color:"#5f6368",fontSize:12 }}>
-                To continue, Google will share your name and email with PawTraxx.
+                To continue, Google will share your name and email with PawTraks.
               </p>
             )}
             <div style={{ display:"flex",gap:8,flexShrink:0 }}>
@@ -1870,8 +1870,8 @@ function Auth({ onLogin }) {
     localStorage.setItem("pt_users", JSON.stringify(users));
     sendSimulatedEmail(
       form.email,
-      "Welcome to PawTraxx! 🐾",
-      "Hi "+form.name+",\n\nYour PawTraxx account has been created successfully.\n\nEmail: "+form.email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraxx Team"
+      "Welcome to PawTraks! 🐾",
+      "Hi "+form.name+",\n\nYour PawTraks account has been created successfully.\n\nEmail: "+form.email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
     );
     onLogin(u);
   }
@@ -1905,14 +1905,14 @@ function Auth({ onLogin }) {
     if (resetMethod === "phone") {
       sendSimulatedSMS(
         found.phone,
-        "Hi " + found.name + ",\n\nYour PawTraxx password reset code is:\n\n    " + otp + "\n\nThis code expires in 10 minutes. If you did not request this, ignore this message.\n\n\u2014 The PawTraxx Team"
+        "Hi " + found.name + ",\n\nYour PawTraks password reset code is:\n\n    " + otp + "\n\nThis code expires in 10 minutes. If you did not request this, ignore this message.\n\n\u2014 The PawTraks Team"
       );
       setMsg("A 6-digit code has been sent to " + found.phone + ". (Demo code: " + otp + ")");
     } else {
       sendSimulatedEmail(
         resetEmail,
-        "PawTraxx Password Reset Code \uD83D\uDD11",
-        "Hi "+found.name+",\n\nYour password reset code is:\n\n    " + otp + "\n\nThis code expires in 10 minutes. If you did not request this, ignore this email.\n\n\u2014 The PawTraxx Team"
+        "PawTraks Password Reset Code \uD83D\uDD11",
+        "Hi "+found.name+",\n\nYour password reset code is:\n\n    " + otp + "\n\nThis code expires in 10 minutes. If you did not request this, ignore this email.\n\n\u2014 The PawTraks Team"
       );
       setMsg("A reset code has been sent to " + resetEmail + ". (Demo code: " + otp + ")");
     }
@@ -2008,7 +2008,7 @@ function Auth({ onLogin }) {
               </g>
             </svg>
             <div style={{ textAlign:"left" }}>
-              <h1 style={{ fontFamily:"Fraunces",fontSize:42,fontWeight:800,color:C.accent,letterSpacing:"-1.5px",lineHeight:1,margin:0 }}>PawTraxx</h1>
+              <h1 style={{ fontFamily:"Fraunces",fontSize:42,fontWeight:800,color:C.accent,letterSpacing:"-1.5px",lineHeight:1,margin:0 }}>PawTraks</h1>
               <p style={{ color:C.muted,fontSize:15,marginTop:8,fontWeight:600,letterSpacing:"2px",margin:"8px 0 0 0" }}>TRACK · CARE · CONNECT</p>
             </div>
           </div>
@@ -5984,14 +5984,14 @@ function sendSimulatedEmail(to, subject, body) {
   var log = JSON.parse(localStorage.getItem(EMAIL_LOG_KEY) || "[]");
   log.unshift({ to: to, subject: subject, body: body, sentAt: new Date().toISOString(), id: String(Date.now()), type: "email" });
   localStorage.setItem(EMAIL_LOG_KEY, JSON.stringify(log.slice(0, 100)));
-  console.log("[PawTraxx Email] To:", to, "| Subject:", subject);
+  console.log("[PawTraks Email] To:", to, "| Subject:", subject);
 }
 
 function sendSimulatedSMS(to, body) {
   var log = JSON.parse(localStorage.getItem(EMAIL_LOG_KEY) || "[]");
   log.unshift({ to: to, subject: "SMS to " + to, body: body, sentAt: new Date().toISOString(), id: String(Date.now()+1), type: "sms" });
   localStorage.setItem(EMAIL_LOG_KEY, JSON.stringify(log.slice(0, 100)));
-  console.log("[PawTraxx SMS] To:", to, "| Message:", body);
+  console.log("[PawTraks SMS] To:", to, "| Message:", body);
 }
 
 // TODO change these before deploying lol
@@ -6017,7 +6017,7 @@ function AdminLogin({ onAuth, onBack }) {
         <div style={{ textAlign:"center",marginBottom:32 }}>
           <div style={{ fontSize:52,marginBottom:10 }}>🛡️</div>
           <h1 style={{ fontFamily:"Fraunces",fontSize:32,fontWeight:800,color:C.purple,letterSpacing:"-1px" }}>Admin Portal</h1>
-          <p style={{ color:C.text,fontSize:16,marginTop:8,fontWeight:500,opacity:0.8 }}>PawTraxx · Restricted Access</p>
+          <p style={{ color:C.text,fontSize:16,marginTop:8,fontWeight:500,opacity:0.8 }}>PawTraks · Restricted Access</p>
         </div>
         <div style={{ background:C.card,border:"1.5px solid "+C.purple,borderRadius:20,padding:28 }}>
           <FF label="Admin Email"><input type="email" placeholder="admin@pawtraxx.com" value={email} onChange={function(e){setEmail(e.target.value);setErr("");}} /></FF>
@@ -6042,7 +6042,7 @@ function AdminLogin({ onAuth, onBack }) {
           </p>
         </div>
         <p style={{ textAlign:"center",color:C.muted,fontSize:15,fontWeight:700,marginTop:20 }}>
-          <a href="#" onClick={function(e){e.preventDefault(); if(onBack) onBack();}} style={{ color:C.muted,textDecoration:"none" }}>← Back to PawTraxx</a>
+          <a href="#" onClick={function(e){e.preventDefault(); if(onBack) onBack();}} style={{ color:C.muted,textDecoration:"none" }}>← Back to PawTraks</a>
         </p>
       </div>
     </div>
@@ -6086,8 +6086,8 @@ function AdminDashboard({ onExit }) {
     localStorage.setItem("pt_users", JSON.stringify(all));
     sendSimulatedEmail(
       email,
-      "Your PawTraxx password has been reset 🔑",
-      "Hi "+userName+",\n\nYour PawTraxx account password was reset by an administrator.\n\nIf you did not request this change, please contact support immediately.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraxx Team"
+      "Your PawTraks password has been reset 🔑",
+      "Hi "+userName+",\n\nYour PawTraks account password was reset by an administrator.\n\nIf you did not request this change, please contact support immediately.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraks Team"
     );
     setResetMsg("✓ Password updated successfully.");
     setTimeout(function(){ setResetPassUser(null); setNewPass(""); setResetMsg(""); }, 1800);
@@ -6099,8 +6099,8 @@ function AdminDashboard({ onExit }) {
     var userName = all[email] ? all[email].name : "User";
     sendSimulatedEmail(
       email,
-      "Your PawTraxx account has been deleted",
-      "Hi "+userName+",\n\nYour PawTraxx account and all associated data have been permanently deleted by an administrator.\n\nIf you believe this was done in error, please contact support.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraxx Team"
+      "Your PawTraks account has been deleted",
+      "Hi "+userName+",\n\nYour PawTraks account and all associated data have been permanently deleted by an administrator.\n\nIf you believe this was done in error, please contact support.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraks Team"
     );
     delete all[email];
     localStorage.setItem("pt_users", JSON.stringify(all));
@@ -6166,7 +6166,7 @@ function AdminDashboard({ onExit }) {
               <span style={{ fontSize:28 }}>🛡️</span>
               <div>
                 <h1 style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.purple,lineHeight:1 }}>Admin Panel</h1>
-                <p style={{ color:C.muted,fontSize:13,fontWeight:600,marginTop:2 }}>PawTraxx</p>
+                <p style={{ color:C.muted,fontSize:13,fontWeight:600,marginTop:2 }}>PawTraks</p>
               </div>
             </div>
           </div>
@@ -6600,7 +6600,7 @@ function AdminDashboard({ onExit }) {
             </h3>
             <p style={{ color:C.text,fontSize:14,lineHeight:1.7,marginBottom:20 }}>
               {confirmBan.banned
-                ? "This will restore "+confirmBan.name+"'s access to PawTraxx."
+                ? "This will restore "+confirmBan.name+"'s access to PawTraks."
                 : confirmBan.name+" will no longer be able to sign in."}
             </p>
             <div style={{ display:"flex",gap:10 }}>
@@ -6620,7 +6620,7 @@ function AdminDashboard({ onExit }) {
   );
 }
 
-export default function PawTraxx() {
+export default function PawTraks() {
   var [darkMode, setDarkMode] = useState(function(){ return localStorage.getItem("pt_theme") !== "light"; });
   var C = makeTheme(darkMode);
   var appCss = makeAppCss(C);
@@ -7051,7 +7051,7 @@ export default function PawTraxx() {
                     <ellipse cx="0" cy="16" rx="3" ry="5" fill="#FF6B9D" opacity="0.8"/>
                   </g>
                 </svg>
-                <h1 style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,letterSpacing:"-.5px" }}>PawTraxx</h1>
+                <h1 style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,letterSpacing:"-.5px" }}>PawTraks</h1>
               </div>
             )}
 
@@ -7296,7 +7296,7 @@ export default function PawTraxx() {
                 </g>
               </svg>
               <div style={{ flex:1,minWidth:0 }}>
-                <h1 style={{ fontFamily:"Fraunces",fontSize:21,fontWeight:800,color:C.accent,letterSpacing:"-.5px",lineHeight:1 }}>PawTraxx</h1>
+                <h1 style={{ fontFamily:"Fraunces",fontSize:21,fontWeight:800,color:C.accent,letterSpacing:"-.5px",lineHeight:1 }}>PawTraks</h1>
                 <p style={{ color:C.muted,fontSize:16,marginTop:1,fontWeight:700 }}>{user.name}</p>
               </div>
               <button onClick={function(){ setShowProfile(true); }}
@@ -7586,11 +7586,11 @@ export default function PawTraxx() {
               // Log confirmation email for user (simulated)
               console.log("=== ACCOUNT DELETION CONFIRMATION EMAIL ===");
               console.log("To:", deletedUserEmail);
-              console.log("Subject: Your PawTraxx Account Has Been Deleted");
+              console.log("Subject: Your PawTraks Account Has Been Deleted");
               console.log("---");
               console.log("Hi " + deletedUserName + ",");
               console.log("");
-              console.log("This email confirms that your PawTraxx account (" + deletedUserEmail + ") has been successfully deleted on " + new Date(deletionTime).toLocaleString() + ".");
+              console.log("This email confirms that your PawTraks account (" + deletedUserEmail + ") has been successfully deleted on " + new Date(deletionTime).toLocaleString() + ".");
               console.log("");
               console.log("All your data including:");
               console.log("- Profile information");
@@ -7602,13 +7602,13 @@ export default function PawTraxx() {
               console.log("");
               console.log("If you deleted your account by mistake, you can create a new account at any time, but your previous data cannot be recovered.");
               console.log("");
-              console.log("Thank you for using PawTraxx!");
+              console.log("Thank you for using PawTraks!");
               console.log("");
-              console.log("- The PawTraxx Team");
+              console.log("- The PawTraks Team");
               console.log("===========================================");
               
               // Show confirmation to user before logout
-              alert("Account Deleted Successfully\n\nA confirmation email has been sent to " + deletedUserEmail + ".\n\nThank you for using PawTraxx!");
+              alert("Account Deleted Successfully\n\nA confirmation email has been sent to " + deletedUserEmail + ".\n\nThank you for using PawTraks!");
               
               // Logout
               setUser(null); setDogs([]); setActiveDog(null); setShowProfile(false);
@@ -7779,7 +7779,7 @@ export default function PawTraxx() {
             
             <div style={{ padding:"28px 32px" }}>
               <p style={{ fontSize:16,color:C.text,lineHeight:1.7,marginBottom:20 }}>
-                To ensure accurate tracking and prevent accidental duplicate entries, <strong style={{ color:C.accent }}>PawTraxx now includes smart cooldown timers</strong> for certain actions.
+                To ensure accurate tracking and prevent accidental duplicate entries, <strong style={{ color:C.accent }}>PawTraks now includes smart cooldown timers</strong> for certain actions.
               </p>
 
               <div style={{ background:C.bg,borderRadius:14,padding:20,marginBottom:20,border:"1.5px solid "+C.border }}>
