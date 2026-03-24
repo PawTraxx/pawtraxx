@@ -5071,22 +5071,22 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
         style={{ background:"linear-gradient(135deg,"+uLvl.glow+" 0%,"+C.card+" 70%)",border:"2px solid "+uLvl.color,borderRadius:20,padding:"22px 24px",marginBottom:14,boxShadow:"0 0 32px "+uLvl.glow,cursor:"pointer",transition:"all .18s" }}
         onMouseEnter={function(e){ e.currentTarget.style.filter="brightness(1.06)"; }}
         onMouseLeave={function(e){ e.currentTarget.style.filter=""; }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
-          <p style={{ fontSize:14,fontWeight:800,color:uLvl.color,textTransform:"uppercase",letterSpacing:".1em" }}>Your Trainer Rank</p>
-          <span style={{ fontSize:14,color:C.text,fontWeight:700,background:C.border,padding:"4px 12px",borderRadius:99 }}>{tp+" TP · TAP FOR ALL TIERS ›"}</span>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8 }}>
+          <p style={{ fontSize:13,fontWeight:800,color:uLvl.color,textTransform:"uppercase",letterSpacing:".1em" }}>Your Trainer Rank</p>
+          <span style={{ fontSize:13,color:C.text,fontWeight:700,background:C.border,padding:"4px 12px",borderRadius:99,whiteSpace:"nowrap" }}>{tp+" TP · TAP FOR ALL TIERS ›"}</span>
         </div>
-        <div style={{ display:"flex",alignItems:"center",gap:18,marginBottom:16 }}>
-          <div style={{ fontSize:54,lineHeight:1,filter:"drop-shadow(0 6px 18px "+uLvl.glow+")",flexShrink:0 }}>{uLvl.icon}</div>
-          <div style={{ flex:1 }}>
-            <p style={{ fontFamily:"Fraunces",fontSize:26,fontWeight:800,color:uLvl.color,lineHeight:1.1,marginBottom:4 }}>{uLvl.label}</p>
-            <p style={{ fontSize:14,color:C.text,fontWeight:500,marginBottom:8 }}>{uLvl.desc}</p>
+        <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:16,flexWrap:"wrap" }}>
+          <div style={{ fontSize:48,lineHeight:1,filter:"drop-shadow(0 6px 18px "+uLvl.glow+")",flexShrink:0 }}>{uLvl.icon}</div>
+          <div style={{ flex:1,minWidth:0 }}>
+            <p style={{ fontFamily:"Fraunces",fontSize:24,fontWeight:800,color:uLvl.color,lineHeight:1.1,marginBottom:4 }}>{uLvl.label}</p>
+            <p style={{ fontSize:13,color:C.text,fontWeight:500,marginBottom:6 }}>{uLvl.desc}</p>
             {nxtLvl
-              ? <p style={{ fontSize:14,color:C.text,fontWeight:600 }}>{toNxt+" TP to reach "+nxtLvl.icon+" "+nxtLvl.label}</p>
-              : <p style={{ fontSize:14,color:uLvl.color,fontWeight:700 }}>Highest rank achieved! 👑</p>}
+              ? <p style={{ fontSize:13,color:C.text,fontWeight:600 }}>{toNxt+" TP to reach "+nxtLvl.icon+" "+nxtLvl.label}</p>
+              : <p style={{ fontSize:13,color:uLvl.color,fontWeight:700 }}>Highest rank achieved! 👑</p>}
           </div>
-          <div style={{ textAlign:"right",flexShrink:0 }}>
-            <p style={{ fontFamily:"Fraunces",fontSize:36,fontWeight:800,color:uLvl.color,lineHeight:1 }}>{tp}</p>
-            <p style={{ fontSize:14,color:C.text,fontWeight:700,marginTop:3 }}>Trainer Points</p>
+          <div style={{ textAlign:"right",flexShrink:0,minWidth:80 }}>
+            <p style={{ fontFamily:"Fraunces",fontSize:32,fontWeight:800,color:uLvl.color,lineHeight:1 }}>{tp}</p>
+            <p style={{ fontSize:13,color:C.text,fontWeight:700,marginTop:3,whiteSpace:"nowrap" }}>Trainer Points</p>
           </div>
         </div>
         <div style={{ background:C.border,borderRadius:999,height:12,overflow:"hidden",marginBottom:8 }}>
