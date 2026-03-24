@@ -6747,12 +6747,6 @@ export default function PawTraks() {
     return function() { document.removeEventListener("keydown", onKey); };
   }, [user, dogs, activeDog, highlightedDogId, focusedSection, showAdd, showEditDog, showProfile, showWelcome, showSearch, search]);
 
-  var SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
-
-  function generateToken() {
-    return Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-  }
-
   useEffect(function() {
     var raw = localStorage.getItem("pt_session");
     if (!raw) return;
@@ -6761,22 +6755,6 @@ export default function PawTraks() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var u = users[s.email];
       if (!u) { localStorage.removeItem("pt_session"); return; }
-
-      // Check expiry
-      if (s.expiresAt && Date.now() > s.expiresAt) {
-        // Session expired - force re-login
-        localStorage.removeItem("pt_session");
-        return;
-      }
-
-      // Valid session - refresh the expiry (keep active users logged in)
-      var refreshed = Object.assign({}, s, {
-        expiresAt: Date.now() + SESSION_DURATION_MS,
-        refreshToken: generateToken(),
-        lastRefreshed: new Date().toISOString()
-      });
-      localStorage.setItem("pt_session", JSON.stringify(refreshed));
-
       setUser(u);
       setDogs(u.dogs || []);
     } catch(e) {
@@ -6831,13 +6809,10 @@ export default function PawTraks() {
     localStorage.setItem("pt_users", JSON.stringify(allUsers));
     var updatedUser = Object.assign({}, u, { sessions: sessions, lastLoginAt: new Date().toISOString() });
     setUser(updatedUser); setDogs(updatedUser.dogs||[]);
-    // Store session with 30-day expiry + refresh token
+    // Store permanent session - only cleared on manual sign out
     localStorage.setItem("pt_session", JSON.stringify({
       email: u.email,
-      loginAt: sessionEntry.loginAt,
-      expiresAt: Date.now() + SESSION_DURATION_MS,
-      refreshToken: generateToken(),
-      lastRefreshed: new Date().toISOString()
+      loginAt: sessionEntry.loginAt
     }));
     setShowWelcome(true);
     requestNotifPermission();
@@ -7231,28 +7206,6 @@ export default function PawTraks() {
             </div>
           )}
 
-          {/* Sign out confirmation */}
-          {showSignOutConfirm && (
-            <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9001,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
-              <div className="fadeIn" style={{ background:C.card,borderRadius:20,padding:28,width:"100%",maxWidth:340,boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
-                <div style={{ textAlign:"center",marginBottom:20 }}>
-                  <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text,marginBottom:8 }}>Sign Out?</p>
-                  <p style={{ fontSize:14,color:C.muted,lineHeight:1.6 }}>You'll need to sign back in to access your account.</p>
-                </div>
-                <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-                  <button onClick={function(){ setShowSignOutConfirm(false); logout(); }}
-                    style={{ width:"100%",background:C.red,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:700,cursor:"pointer" }}>
-                    Yes, Sign Out
-                  </button>
-                  <button onClick={function(){ setShowSignOutConfirm(false); }}
-                    style={{ width:"100%",background:"transparent",border:"1.5px solid "+C.border,color:C.text,borderRadius:12,padding:"14px",fontSize:16,fontWeight:600,cursor:"pointer" }}>
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Back to dogs bottom bar when viewing a dog */}
           {activeDog && (
             <div style={{ position:"fixed",bottom:0,left:0,right:0,padding:"10px 16px",background:C.card,borderTop:"1px solid "+C.border,display:"flex",gap:8,zIndex:500,paddingBottom:"calc(10px + env(safe-area-inset-bottom))" }}>
@@ -7420,7 +7373,6 @@ export default function PawTraks() {
             <button className="btnP" onClick={function(){ setShowAdd(true); }} style={{ width:"100%",marginBottom:7,fontSize:13 }}>
               {"+ Add Dog"+(dogs.length>0?" ("+dogs.length+"/100)":"")}
             </button>
-            <button className="btnG" onClick={logout} style={{ width:"100%",fontSize:14,padding:"11px",fontWeight:600,color:C.red,borderColor:C.red }}>Sign Out</button>
           </div>
         </div>
 
@@ -7502,6 +7454,27 @@ export default function PawTraks() {
           </div>
         </div>
       )}
+      {showSignOutConfirm && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9001,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
+          <div className="fadeIn" style={{ background:C.card,borderRadius:20,padding:28,width:"100%",maxWidth:340,boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
+            <div style={{ textAlign:"center",marginBottom:20 }}>
+              <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text,marginBottom:8 }}>Sign Out?</p>
+              <p style={{ fontSize:14,color:C.muted,lineHeight:1.6 }}>You'll need to sign back in to access your account.</p>
+            </div>
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              <button onClick={function(){ setShowSignOutConfirm(false); logout(); }}
+                style={{ width:"100%",background:C.red,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:700,cursor:"pointer" }}>
+                Yes, Sign Out
+              </button>
+              <button onClick={function(){ setShowSignOutConfirm(false); }}
+                style={{ width:"100%",background:"transparent",border:"1.5px solid "+C.border,color:C.text,borderRadius:12,padding:"14px",fontSize:16,fontWeight:600,cursor:"pointer" }}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showProfile && (
         <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
           <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
