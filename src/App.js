@@ -7236,7 +7236,6 @@ export default function PawTraxx() {
             <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",zIndex:9001,display:"flex",alignItems:"center",justifyContent:"center",padding:24 }}>
               <div className="fadeIn" style={{ background:C.card,borderRadius:20,padding:28,width:"100%",maxWidth:340,boxShadow:"0 20px 60px rgba(0,0,0,0.4)" }}>
                 <div style={{ textAlign:"center",marginBottom:20 }}>
-                  <div style={{ fontSize:44,marginBottom:12 }}>🚪</div>
                   <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text,marginBottom:8 }}>Sign Out?</p>
                   <p style={{ fontSize:14,color:C.muted,lineHeight:1.6 }}>You'll need to sign back in to access your account.</p>
                 </div>
