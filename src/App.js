@@ -1796,7 +1796,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
 function Auth({ onLogin }) {
   var C = useTheme();
   var [mode, setMode] = useState("login"); // "login" | "register" | "forgot" | "otp" | "reset"
-  var [form, setForm] = useState({ name:"", email:"", password:"", phone:"" });
+  var [form, setForm] = useState({ name:"", email:"", password:"", phone:"", inviteCode:"" });
   var [err, setErr] = useState("");
   var [msg, setMsg] = useState("");
   var [otpInput, setOtpInput] = useState("");
@@ -1817,6 +1817,9 @@ function Auth({ onLogin }) {
     if (mode === "register") {
       if (!form.name) { setErr("Enter your name."); return; }
       if (!form.phone) { setErr("Phone number is required for account recovery."); return; }
+      if (!form.inviteCode || form.inviteCode.trim() !== INVITE_CODE) {
+        setErr("Invalid invite code. Please contact PawTraks to get access."); return;
+      }
       
       // Check if phone number is already in use
       var normalize = function(p){ return p.replace(/\D/g,""); };
@@ -2034,6 +2037,11 @@ function Auth({ onLogin }) {
               {mode === "register" && (
                 <FF label="Phone Number" hint="Used for account recovery — required">
                   <input type="tel" placeholder="+1 (555) 000-0000" value={form.phone} onChange={function(e){upd("phone",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
+                </FF>
+              )}
+              {mode === "register" && (
+                <FF label="Invite Code" hint="Required to create an account">
+                  <input placeholder="Enter your invite code" value={form.inviteCode} onChange={function(e){upd("inviteCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
                 </FF>
               )}
               {msg && <p style={{ color:C.green,fontSize:13,marginBottom:12,lineHeight:1.5 }}>{msg}</p>}
@@ -6032,6 +6040,7 @@ var ADMIN_EMAIL = "pawtraxx01@admin.com";
 var ADMIN_PASS  = "pawAdmin1997!";
 var MASTER_EMAIL = "pawtraks@master.com";
 var MASTER_PASS  = "PawTraks@Master1!";
+var INVITE_CODE = "PTraks2026";
 
 // admin login page
 function AdminLogin({ onAuth, onBack }) {
