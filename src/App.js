@@ -506,7 +506,7 @@ function getOutsideCooldown(dog) {
   if (age < 0.5)  return 0.5  * 3600000; // Under 6 months: every 30 min
   if (age < 1)    return 1    * 3600000; // 6-12 months: every 1 hour
   if (age < 3)    return 1.5  * 3600000; // 1-3 years: every 1.5 hours
-  if (age < 8)    return 2    * 3600000; // Adult: every 2 hours
+  if (age < 8)    return 4    * 3600000; // Adult: every 4 hours
   return           3    * 3600000;        // Senior 8+: every 3 hours
 }
 
@@ -4616,8 +4616,25 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
   TABS.push({ id:"log", icon:"📋", lbl:"Activity Log" });
   TABS.push({ id:"badges", icon:"🏆", lbl:"Badges" });
 
+  var isBirthday = (function() {
+    if (!dog.dob) return false;
+    var today = new Date();
+    var dob = new Date(dog.dob);
+    return today.getMonth() === dob.getMonth() && today.getDate() === dob.getDate();
+  })();
+
   return (
     <div className="fadeIn" data-dogdetail="true">
+      {isBirthday && (
+        <div style={{ background:"linear-gradient(135deg,#fde68a,#fbbf24)",border:"2px solid #f59e0b",borderRadius:14,padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12,animation:"fadeIn .5s" }}>
+          <span style={{ fontSize:32 }}>🎉</span>
+          <div>
+            <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:"#92400e",margin:0 }}>Happy Birthday, {dog.name}! 🎂</p>
+            <p style={{ fontSize:13,color:"#92400e",marginTop:2,fontWeight:600 }}>Today is {dog.name}'s special day!</p>
+          </div>
+          <span style={{ fontSize:32,marginLeft:"auto" }}>🎊</span>
+        </div>
+      )}
       <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:20,borderBottom:"1px solid "+C.border }}>
         <div style={{ fontSize:50,background:C.accentFaint,borderRadius:18,width:74,height:74,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,border:"1.5px solid "+C.border,overflow:"hidden" }}>
           {dog.photo
@@ -4625,7 +4642,10 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
             : dog.emoji}
         </div>
         <div style={{ flex:1,minWidth:0 }}>
-          <h2 style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:700,color:C.text,marginBottom:2 }}><span style={{ marginRight:6 }}>&#x1F43E;</span>{dog.name}<span style={{ marginLeft:6 }}>&#x1F43E;</span></h2>
+          <h2 style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:700,color:C.text,marginBottom:2 }}>
+            {isBirthday && <span style={{ marginRight:4 }}>🎩</span>}
+            <span style={{ marginRight:6 }}>&#x1F43E;</span>{dog.name}<span style={{ marginLeft:6 }}>&#x1F43E;</span>
+          </h2>
           <p style={{ color:C.muted,fontSize:16 }}>{dog.breed} · {formatAge(dog.age)} · {dog.weight||"?"} lbs · {dog.gender==="female"?"Female":"Male"}{dog.dob ? " · Born "+fmtDate(dog.dob) : ""}</p>
           <div style={{ display:"flex",gap:6,marginTop:6,flexWrap:"wrap" }}>
             <Chip color="accent" extraStyle={{ fontSize:15,padding:"5px 14px",fontWeight:700 }}>{cat.replace(/_/g," ").replace(/\b\w/g,function(c){return c.toUpperCase();})}</Chip>
