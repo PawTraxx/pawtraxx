@@ -1878,7 +1878,16 @@ function Auth({ onLogin }) {
         return;
       }
       var found = users[form.email];
-      if (!found || found.password !== form.password) { setErr("Invalid email or password."); return; }
+      if (!found) { setErr("Invalid email or password."); return; }
+      // Google auth account with no password set — let them in and prompt to set one
+      if (found.googleAuth && !found.password) {
+        found.password = form.password;
+        users[form.email] = found;
+        localStorage.setItem("pt_users", JSON.stringify(users));
+        onLogin(found);
+        return;
+      }
+      if (!found.password || found.password !== form.password) { setErr("Invalid email or password."); return; }
       if (found.banned) { setErr("This account has been suspended. Please contact support."); return; }
       onLogin(found);
     }
