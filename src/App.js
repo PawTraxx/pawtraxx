@@ -6830,40 +6830,72 @@ export default function PawTraks() {
     }
   }
 
-  function sendScheduleToSW(dogList) {
-    if (!('serviceWorker' in navigator)) return;
-    navigator.serviceWorker.ready.then(function(reg) {
-      if (reg.active) {
-        reg.active.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', dogs: dogList });
-      }
+  var PUSH_SERVER = "https://pawtraks-push-server.up.railway.app";
+  var VAPID_PUBLIC_KEY = "A0IABKpGcJyGslrLGQmvQXwNm0BhrzEP9RMISt2_EaJT4UHRtibqows7ZdayxvqprtG56kvCaHrBXZEo6w7r4koqpj8";
+
+  function urlBase64ToUint8Array(base64String) {
+    var padding = '='.repeat((4 - base64String.length % 4) % 4);
+    var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+    var rawData = window.atob(base64);
+    var outputArray = new Uint8Array(rawData.length);
+    for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+
+  function sendScheduleToServer(dogList, userId) {
+    if (!userId || !dogList) return;
+    fetch(PUSH_SERVER + '/schedule', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: userId, dogs: dogList })
     }).catch(function(){});
   }
 
-  function requestNotifPermission() {
-    if (typeof Notification === "undefined") return;
-    if (Notification.permission === "default") {
-      Notification.requestPermission().then(function(perm) {
-        if (perm === "granted") {
-          registerServiceWorker();
-        }
+  function subscribeUserToPush(reg, userId) {
+    reg.pushManager.getSubscription().then(function(existing) {
+      if (existing) {
+        // Already subscribed — just re-send to server
+        fetch(PUSH_SERVER + '/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId, subscription: existing.toJSON() })
+        }).catch(function(){});
+        return;
+      }
+      reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      }).then(function(sub) {
+        fetch(PUSH_SERVER + '/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: userId, subscription: sub.toJSON() })
+        }).catch(function(){});
+      }).catch(function(err) {
+        console.log('Push subscription failed:', err);
       });
-    } else if (Notification.permission === "granted") {
-      registerServiceWorker();
-    }
+    });
   }
 
-  function registerServiceWorker() {
+  function registerServiceWorker(userId, dogList) {
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
-      // Send current dog schedules once registered
-      var currentDogs = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
-      if (session.email && currentDogs[session.email]) {
-        sendScheduleToSW(currentDogs[session.email].dogs || []);
-      }
+      subscribeUserToPush(reg, userId);
+      if (dogList) sendScheduleToServer(dogList, userId);
     }).catch(function(err) {
       console.log('SW registration failed:', err);
     });
+  }
+
+  function requestNotifPermission(userId, dogList) {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(function(perm) {
+        if (perm === "granted") registerServiceWorker(userId, dogList);
+      });
+    } else if (Notification.permission === "granted") {
+      registerServiceWorker(userId, dogList);
+    }
   }
 
   function login(u) {
@@ -6880,7 +6912,7 @@ export default function PawTraks() {
       loginAt: sessionEntry.loginAt
     }));
     setShowWelcome(true);
-    requestNotifPermission();
+    requestNotifPermission(u.email, updatedUser.dogs || []);
   }
   function logout() {
     // Track session end
@@ -6898,7 +6930,16 @@ export default function PawTraks() {
         localStorage.setItem("pt_users", JSON.stringify(allUsers));
       }
     }
+    var logoutEmail = user ? user.email : null;
     setUser(null); setDogs([]); setActiveDog(null); localStorage.removeItem("pt_session");
+    // Unsubscribe from push server
+    if (logoutEmail) {
+      fetch(PUSH_SERVER + '/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: logoutEmail })
+      }).catch(function(){});
+    }
   }
   function addDog(dog) { if(dogs.length>=100){alert("Max 100 dogs.");return;} persist(dogs.concat([dog])); setShowAdd(false); setActiveDog(dog); earnTP(TP_VALUES.add_dog, "Added a new dog: "+dog.name); }
   var updateDog = useCallback(function(upd) {
@@ -6909,20 +6950,21 @@ export default function PawTraks() {
   }, [dogs, persist]);
   function deleteDog(id) { persist(dogs.filter(function(d){ return d.id!==id; })); setActiveDog(null); }
 
-  // Re-send notification schedules to SW whenever dogs change
+  // Re-send schedule to push server whenever dogs change
   useEffect(function() {
     if (!user || !dogs.length) return;
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      sendScheduleToSW(dogs);
+      sendScheduleToServer(dogs, user.email);
     }
   }, [dogs, user]);
 
   // Register SW on app load if permission already granted
   useEffect(function() {
+    if (!user) return;
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      registerServiceWorker();
+      registerServiceWorker(user.email, dogs);
     }
-  }, []);
+  }, [user]);
 
   // check notifications every minute
   useEffect(function() {
