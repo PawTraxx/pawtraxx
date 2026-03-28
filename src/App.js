@@ -4619,20 +4619,28 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
   var isBirthday = (function() {
     if (!dog.dob) return false;
     var today = new Date();
-    var dob = new Date(dog.dob);
-    return today.getMonth() === dob.getMonth() && today.getDate() === dob.getDate();
+    // Parse DOB as local date to avoid timezone offset issues
+    var parts = dog.dob.split("-");
+    if (parts.length !== 3) return false;
+    var dobMonth = parseInt(parts[1]) - 1; // 0-indexed
+    var dobDay = parseInt(parts[2]);
+    return today.getMonth() === dobMonth && today.getDate() === dobDay;
   })();
 
   return (
     <div className="fadeIn" data-dogdetail="true">
       {isBirthday && (
-        <div style={{ background:"linear-gradient(135deg,#fde68a,#fbbf24)",border:"2px solid #f59e0b",borderRadius:14,padding:"12px 18px",marginBottom:16,display:"flex",alignItems:"center",gap:12,animation:"fadeIn .5s" }}>
-          <span style={{ fontSize:32 }}>🎉</span>
-          <div>
-            <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:"#92400e",margin:0 }}>Happy Birthday, {dog.name}! 🎂</p>
-            <p style={{ fontSize:13,color:"#92400e",marginTop:2,fontWeight:600 }}>Today is {dog.name}'s special day!</p>
+        <div style={{ background:"linear-gradient(135deg,#fde68a,#fbbf24)",border:"2px solid #f59e0b",borderRadius:16,padding:"16px 20px",marginBottom:16,display:"flex",alignItems:"center",gap:16,animation:"fadeIn .5s" }}>
+          <div style={{ display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+            <span style={{ fontSize:56,lineHeight:1,filter:"drop-shadow(0 4px 8px rgba(0,0,0,0.15))" }}>🎂</span>
           </div>
-          <span style={{ fontSize:32,marginLeft:"auto" }}>🎊</span>
+          <div style={{ flex:1,textAlign:"center" }}>
+            <p style={{ fontFamily:"Fraunces",fontSize:19,fontWeight:800,color:"#92400e",margin:0,lineHeight:1.3 }}>Happy Birthday, {dog.name}!</p>
+            <p style={{ fontSize:13,color:"#7c3100",marginTop:4,fontWeight:600 }}>🐾 Today is {dog.name}'s special day! 🐾</p>
+          </div>
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>
+            <span style={{ fontSize:52,lineHeight:1,filter:"drop-shadow(0 4px 8px rgba(0,0,0,0.15))" }}>🎊</span>
+          </div>
         </div>
       )}
       <div style={{ display:"flex",alignItems:"center",gap:16,marginBottom:20,paddingBottom:20,borderBottom:"1px solid "+C.border }}>
@@ -4643,7 +4651,6 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
         </div>
         <div style={{ flex:1,minWidth:0 }}>
           <h2 style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:700,color:C.text,marginBottom:2 }}>
-            {isBirthday && <span style={{ marginRight:4 }}>🎩</span>}
             <span style={{ marginRight:6 }}>&#x1F43E;</span>{dog.name}<span style={{ marginLeft:6 }}>&#x1F43E;</span>
           </h2>
           <p style={{ color:C.muted,fontSize:16 }}>{dog.breed} · {formatAge(dog.age)} · {dog.weight||"?"} lbs · {dog.gender==="female"?"Female":"Male"}{dog.dob ? " · Born "+fmtDate(dog.dob) : ""}</p>
