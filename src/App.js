@@ -6831,7 +6831,7 @@ export default function PawTraks() {
   }
 
   var PUSH_SERVER = "https://pawtraks-push-server.up.railway.app";
-  var VAPID_PUBLIC_KEY = "A0IABKpGcJyGslrLGQmvQXwNm0BhrzEP9RMISt2_EaJT4UHRtibqows7ZdayxvqprtG56kvCaHrBXZEo6w7r4koqpj8";
+  var VAPID_PUBLIC_KEY = "BDog6Dq3O44SgyVZhKYL2ypqykH02_BBLdYEIAZiuhCQbcVdWWm-t6dkQirES-SgzUK06lQVyvidyC9p7tGVNeU";
 
   function urlBase64ToUint8Array(base64String) {
     var padding = '='.repeat((4 - base64String.length % 4) % 4);
