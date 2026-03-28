@@ -7036,7 +7036,15 @@ export default function PawTraks() {
     // Keep activeDog reference fresh if it's the same dog being updated
     setActiveDog(function(cur){ return cur && cur.id===upd.id ? upd : cur; });
   }, [dogs, persist]);
-  function deleteDog(id) { persist(dogs.filter(function(d){ return d.id!==id; })); setActiveDog(null); }
+  function deleteDog(id) {
+    var newList = dogs.filter(function(d){ return d.id!==id; });
+    persist(newList);
+    setActiveDog(null);
+    // Update push server schedule without the deleted dog
+    if (user && typeof Notification !== "undefined" && Notification.permission === "granted") {
+      sendScheduleToServer(newList, user.email);
+    }
+  }
 
   // Re-send schedule to push server whenever dogs change
   useEffect(function() {
@@ -7061,6 +7069,7 @@ export default function PawTraks() {
   // Register SW and re-subscribe on every app load
   useEffect(function() {
     if (!user) return;
+    if (user.notificationsEnabled === false) return; // user turned off notifications
     if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
     if (!('serviceWorker' in navigator)) return;
     navigator.serviceWorker.register('/sw.js').then(function(reg) {
@@ -7723,6 +7732,38 @@ export default function PawTraks() {
               <span style={{ position:"absolute",top:3,left:darkMode?24:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)" }} />
             </button>
           </div>
+          {(function(){
+            var notifOn = user.notificationsEnabled !== false;
+            return (
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                  <span style={{ fontSize:20 }}>{notifOn ? "🔔" : "🔕"}</span>
+                  <div>
+                    <p style={{ fontSize:13,fontWeight:600,color:C.text }}>Push Notifications</p>
+                    <p style={{ fontSize:13,color:C.muted,marginTop:2,fontWeight:700 }}>{notifOn ? "Reminders are active" : "Reminders are off"}</p>
+                  </div>
+                </div>
+                <button onClick={function(){
+                  var newVal = user.notificationsEnabled === false ? true : false;
+                  persistUser({ notificationsEnabled: newVal });
+                  if (newVal) {
+                    // Re-subscribe
+                    requestNotifPermission(user.email, dogs);
+                  } else {
+                    // Unsubscribe from push server
+                    fetch(PUSH_SERVER + '/unsubscribe', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ userId: user.email })
+                    }).catch(function(){});
+                  }
+                }}
+                  style={{ width:48,height:26,borderRadius:99,background:notifOn?C.accent:C.border,border:"none",position:"relative",cursor:"pointer",transition:"background .2s",flexShrink:0 }}>
+                  <span style={{ position:"absolute",top:3,left:notifOn?24:3,width:20,height:20,borderRadius:"50%",background:"#fff",transition:"left .2s",boxShadow:"0 1px 4px rgba(0,0,0,.25)" }} />
+                </button>
+              </div>
+            );
+          })()}
           <div style={{ display:"flex",gap:10,marginTop:6,marginBottom:24 }}>
             <button className="btnP" onClick={function(){
               var nameEl = document.getElementById("profile-name-input");
