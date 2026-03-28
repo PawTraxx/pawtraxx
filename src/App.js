@@ -6992,12 +6992,37 @@ export default function PawTraks() {
     }
   }, [dogs, user]);
 
-  // Register SW on app load if permission already granted
+  // Register SW and re-subscribe on every app load
   useEffect(function() {
     if (!user) return;
-    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-      registerServiceWorker(user.email, dogs);
-    }
+    if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      reg.pushManager.getSubscription().then(function(sub) {
+        if (sub) {
+          // Already subscribed — re-send to server immediately
+          fetch(PUSH_SERVER + '/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: user.email, subscription: sub.toJSON() })
+          }).catch(function(){});
+          sendScheduleToServer(dogs, user.email);
+        } else {
+          // Not subscribed — subscribe fresh
+          reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+          }).then(function(newSub) {
+            fetch(PUSH_SERVER + '/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.email, subscription: newSub.toJSON() })
+            }).catch(function(){});
+            sendScheduleToServer(dogs, user.email);
+          }).catch(function(){});
+        }
+      });
+    }).catch(function(){});
   }, [user]);
 
   // check notifications every minute
