@@ -6977,9 +6977,9 @@ export default function PawTraks() {
   // Re-send schedule to push server whenever dogs change
   useEffect(function() {
     if (!user || !dogs.length) return;
+    if (user.notificationsEnabled === false) return; // user turned off notifications
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       sendScheduleToServer(dogs, user.email);
-      // Also re-subscribe in case server restarted and lost the subscription
       navigator.serviceWorker && navigator.serviceWorker.ready.then(function(reg) {
         reg.pushManager.getSubscription().then(function(sub) {
           if (sub) {
