@@ -6964,6 +6964,18 @@ export default function PawTraks() {
     if (!user || !dogs.length) return;
     if (typeof Notification !== "undefined" && Notification.permission === "granted") {
       sendScheduleToServer(dogs, user.email);
+      // Also re-subscribe in case server restarted and lost the subscription
+      navigator.serviceWorker && navigator.serviceWorker.ready.then(function(reg) {
+        reg.pushManager.getSubscription().then(function(sub) {
+          if (sub) {
+            fetch(PUSH_SERVER + '/subscribe', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.email, subscription: sub.toJSON() })
+            }).catch(function(){});
+          }
+        });
+      }).catch(function(){});
     }
   }, [dogs, user]);
 
