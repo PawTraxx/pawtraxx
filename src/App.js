@@ -6830,7 +6830,7 @@ export default function PawTraks() {
     }
   }
 
-  var PUSH_SERVER = "https://pawtraks-push-server.up.railway.app";
+  var PUSH_SERVER = "https://pawtraks-push-server-production.up.railway.app";
   var VAPID_PUBLIC_KEY = "BDog6Dq3O44SgyVZhKYL2ypqykH02_BBLdYEIAZiuhCQbcVdWWm-t6dkQirES-SgzUK06lQVyvidyC9p7tGVNeU";
 
   function urlBase64ToUint8Array(base64String) {
