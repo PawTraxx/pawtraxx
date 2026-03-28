@@ -524,26 +524,40 @@ function getCooldownLabel(dog) {
 function formatAge(age) {
   var a = parseFloat(age);
   if (isNaN(a) || age === "" || age === undefined) return "? yrs";
-  if (a < 0.25) {
-    // Under 3 months — show weeks
-    var weeks = Math.round(a * 52);
-    if (weeks <= 1) return "1 week old";
-    return weeks + " weeks old";
+
+  var totalDays = Math.round(a * 365);
+
+  if (totalDays < 14) {
+    var days = totalDays;
+    return days <= 7 ? "1 week old" : days + " days old";
   }
-  if (a < 1) {
-    // Under 1 year — show months
-    var months = Math.round(a * 12);
-    if (months <= 1) return "1 month old";
-    return months + " months old";
+  if (totalDays < 90) {
+    var weeks = Math.round(totalDays / 7);
+    return weeks + " week" + (weeks !== 1 ? "s" : "") + " old";
   }
-  // 1 year or older — show years and remaining months
-  var totalMonths = Math.round(a * 12);
-  var years = Math.floor(totalMonths / 12);
-  var remainingMonths = totalMonths % 12;
-  if (remainingMonths === 0) {
-    return years + " yr" + (years !== 1 ? "s" : "");
+  if (totalDays < 365) {
+    var months = Math.floor(totalDays / 30);
+    var remWeeks = Math.round((totalDays - months * 30) / 7);
+    var str = months + " month" + (months !== 1 ? "s" : "");
+    if (remWeeks > 0) str += " " + remWeeks + " week" + (remWeeks !== 1 ? "s" : "");
+    return str;
   }
-  return years + " yr" + (years !== 1 ? "s" : "") + " " + remainingMonths + " mo";
+  // 1 year or older — show years + months, or years + weeks if less than 1 month
+  var years = Math.floor(totalDays / 365);
+  var remDays = totalDays - years * 365;
+  var remMonths = Math.floor(remDays / 30);
+  var remWks = Math.round(remDays / 7);
+  var yearLabel = years + " year" + (years !== 1 ? "s" : "");
+
+  if (remMonths >= 1) {
+    // 1 month or more left — show years + months only
+    return yearLabel + " " + remMonths + " month" + (remMonths !== 1 ? "s" : "");
+  }
+  if (remWks > 0) {
+    // Less than 1 month left — show years + weeks only
+    return yearLabel + " " + remWks + " week" + (remWks !== 1 ? "s" : "");
+  }
+  return yearLabel;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4534,10 +4548,10 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
       var birthDate = new Date(dog.dob);
       var today = new Date();
       var ageYears = (today - birthDate) / (365.25 * 24 * 60 * 60 * 1000);
-      var calculatedAge = Math.max(0, ageYears).toFixed(1);
+      var calculatedAge = Math.max(0, ageYears).toFixed(3);
       
-      // Only update if age has changed by at least 0.1 years
-      if (Math.abs(parseFloat(dog.age || 0) - parseFloat(calculatedAge)) >= 0.1) {
+      // Only update if age has changed by at least 0.005 years (~2 days)
+      if (Math.abs(parseFloat(dog.age || 0) - parseFloat(calculatedAge)) >= 0.005) {
         onUpdate(Object.assign({}, dog, { age: calculatedAge }));
       }
     }
