@@ -536,9 +536,14 @@ function formatAge(age) {
     if (months <= 1) return "1 month old";
     return months + " months old";
   }
-  // 1 year or older — show years
-  var years = parseFloat(a.toFixed(1));
-  return years + " yr" + (years !== 1 ? "s" : "");
+  // 1 year or older — show years and remaining months
+  var totalMonths = Math.round(a * 12);
+  var years = Math.floor(totalMonths / 12);
+  var remainingMonths = totalMonths % 12;
+  if (remainingMonths === 0) {
+    return years + " yr" + (years !== 1 ? "s" : "");
+  }
+  return years + " yr" + (years !== 1 ? "s" : "") + " " + remainingMonths + " mo";
 }
 
 // ═══════════════════════════════════════════════════════════════
