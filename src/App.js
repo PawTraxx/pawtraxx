@@ -521,6 +521,26 @@ function getCooldownLabel(dog) {
   return "Senior";
 }
 
+function formatAge(age) {
+  var a = parseFloat(age);
+  if (isNaN(a) || age === "" || age === undefined) return "? yrs";
+  if (a < 0.25) {
+    // Under 3 months — show weeks
+    var weeks = Math.round(a * 52);
+    if (weeks <= 1) return "1 week old";
+    return weeks + " weeks old";
+  }
+  if (a < 1) {
+    // Under 1 year — show months
+    var months = Math.round(a * 12);
+    if (months <= 1) return "1 month old";
+    return months + " months old";
+  }
+  // 1 year or older — show years
+  var years = parseFloat(a.toFixed(1));
+  return years + " yr" + (years !== 1 ? "s" : "");
+}
+
 // ═══════════════════════════════════════════════════════════════
 // TIER SYSTEM - Progressive with Action Limits (Hybrid Model)
 // ═══════════════════════════════════════════════════════════════
@@ -4587,7 +4607,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
         </div>
         <div style={{ flex:1,minWidth:0 }}>
           <h2 style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:700,color:C.text,marginBottom:2 }}><span style={{ marginRight:6 }}>&#x1F43E;</span>{dog.name}<span style={{ marginLeft:6 }}>&#x1F43E;</span></h2>
-          <p style={{ color:C.muted,fontSize:16 }}>{dog.breed} · {dog.age||"?"} yrs · {dog.weight||"?"} lbs · {dog.gender==="female"?"Female":"Male"}{dog.dob ? " · Born "+fmtDate(dog.dob) : ""}</p>
+          <p style={{ color:C.muted,fontSize:16 }}>{dog.breed} · {formatAge(dog.age)} · {dog.weight||"?"} lbs · {dog.gender==="female"?"Female":"Male"}{dog.dob ? " · Born "+fmtDate(dog.dob) : ""}</p>
           <div style={{ display:"flex",gap:6,marginTop:6,flexWrap:"wrap" }}>
             <Chip color="accent" extraStyle={{ fontSize:15,padding:"5px 14px",fontWeight:700 }}>{cat.replace(/_/g," ").replace(/\b\w/g,function(c){return c.toUpperCase();})}</Chip>
             {heat && heat.inHeat && <span style={{ display:"inline-flex",alignItems:"center",padding:"4px 12px",borderRadius:99,fontSize:14,fontWeight:800,background:C.pinkFaint,color:C.pink }}>{"🌸 In Heat · Day "+heat.heatDay}</span>}
@@ -6428,7 +6448,7 @@ function AdminDashboard({ onExit }) {
                             </div>
                             <div style={{ flex:1,minWidth:0 }}>
                               <p style={{ fontWeight:700,fontSize:14,color:C.text }}>{d.name}</p>
-                              <p style={{ fontSize:12,color:C.muted }}>{d.breed} · {d.age} yr{d.age!==1?"s":""} · {d.weight} lbs</p>
+                              <p style={{ fontSize:12,color:C.muted }}>{d.breed} · {formatAge(d.age)} · {d.weight} lbs</p>
                             </div>
                           </div>
                         );
