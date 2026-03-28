@@ -4608,7 +4608,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>🍽️</div>
           <div style={{ fontWeight:600,fontSize:13,marginTop:4 }}>Gave Food</div>
           <div style={{ fontSize:11,color:C.green,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastFed)}</div>
-          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+1 TP</div>
+          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+0.5 TP</div>
         </button>
         <button onClick={function(){
           var cooldownTimestamps = dog.cooldownTimestamps || {};
@@ -4633,7 +4633,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>💧</div>
           <div style={{ fontWeight:600,fontSize:13,marginTop:4 }}>Gave Water</div>
           <div style={{ fontSize:11,color:C.blue,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastWater)}</div>
-          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+1 TP</div>
+          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+0.5 TP</div>
         </button>
         <button onClick={function(){
           var cooldownTimestamps = dog.cooldownTimestamps || {};
@@ -6830,10 +6830,40 @@ export default function PawTraks() {
     }
   }
 
+  function sendScheduleToSW(dogList) {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.ready.then(function(reg) {
+      if (reg.active) {
+        reg.active.postMessage({ type: 'SCHEDULE_NOTIFICATIONS', dogs: dogList });
+      }
+    }).catch(function(){});
+  }
+
   function requestNotifPermission() {
-    if (typeof Notification !== "undefined" && Notification.permission === "default") {
-      Notification.requestPermission();
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      Notification.requestPermission().then(function(perm) {
+        if (perm === "granted") {
+          registerServiceWorker();
+        }
+      });
+    } else if (Notification.permission === "granted") {
+      registerServiceWorker();
     }
+  }
+
+  function registerServiceWorker() {
+    if (!('serviceWorker' in navigator)) return;
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      // Send current dog schedules once registered
+      var currentDogs = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+      if (session.email && currentDogs[session.email]) {
+        sendScheduleToSW(currentDogs[session.email].dogs || []);
+      }
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
   }
 
   function login(u) {
@@ -6878,6 +6908,21 @@ export default function PawTraks() {
     setActiveDog(function(cur){ return cur && cur.id===upd.id ? upd : cur; });
   }, [dogs, persist]);
   function deleteDog(id) { persist(dogs.filter(function(d){ return d.id!==id; })); setActiveDog(null); }
+
+  // Re-send notification schedules to SW whenever dogs change
+  useEffect(function() {
+    if (!user || !dogs.length) return;
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      sendScheduleToSW(dogs);
+    }
+  }, [dogs, user]);
+
+  // Register SW on app load if permission already granted
+  useEffect(function() {
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      registerServiceWorker();
+    }
+  }, []);
 
   // check notifications every minute
   useEffect(function() {
