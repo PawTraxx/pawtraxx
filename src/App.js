@@ -5311,6 +5311,91 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
 }
 
 // main dashboard
+function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnTP, setCooldownAlert, dismissAlert, dismissGroup }) {
+  var [open, setOpen] = useState(false);
+  var actionLabels = {
+    feed: { icon:"🍽️", label:"Food & Water Overdue", color:C.green },
+    out:  { icon:"🌳", label:"Needs Outside", color:C.blue },
+    vax:  { icon:"💉", label:"Overdue Vaccination", color:C.red },
+    heat: { icon:"🌸", label:"Heat Cycle Alert", color:C.pink },
+    med:  { icon:"💊", label:"Medication Ending Soon", color:C.purple },
+    appt: { icon:"🩺", label:"Vet Appointment Soon", color:C.blue },
+  };
+
+  return (
+    <div style={{ marginBottom:8,border:"1px solid "+C.border,borderRadius:12,overflow:"hidden" }}>
+      {/* Dog header row */}
+      <button onClick={function(){ setOpen(function(v){ return !v; }); }}
+        style={{ width:"100%",display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",background:C.accentFaint,border:"none",cursor:"pointer",gap:10 }}>
+        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+          <div style={{ width:30,height:30,borderRadius:"50%",overflow:"hidden",border:"1.5px solid "+C.border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,background:C.bg }}>
+            {dog.photo ? <img src={dog.photo} alt={dog.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : dog.emoji}
+          </div>
+          <span style={{ fontWeight:800,fontSize:15,color:C.text }}>{dog.name}</span>
+          <span style={{ background:C.accent,color:"#fff",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:99 }}>{alerts.length}</span>
+        </div>
+        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+          <span style={{ fontSize:13,color:C.muted,display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s" }}>⌄</span>
+          <button onClick={function(e){ e.stopPropagation(); dismissGroup(); }}
+            style={{ width:22,height:22,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+        </div>
+      </button>
+      {/* Alert rows */}
+      {open && (
+        <div style={{ background:C.card }}>
+          {alerts.map(function(alert, idx) {
+            var info = actionLabels[alert.type] || {};
+            var isLast = idx === alerts.length - 1;
+            return (
+              <div key={alert.type + idx} style={{ display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 14px",borderTop:"1px solid "+C.border }}>
+                <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                  <span style={{ fontSize:16 }}>{info.icon}</span>
+                  <span style={{ fontSize:14,color:C.text,fontWeight:600 }}>{info.label}</span>
+                </div>
+                <div style={{ display:"flex",gap:6 }}>
+                  {alert.type === "feed" && (
+                    <div style={{ display:"flex",gap:6 }}>
+                      <button className="btnP" style={{ fontSize:13,padding:"7px 14px" }} onClick={function(){
+                        var ts = new Date().toISOString();
+                        var entry = { id:String(Date.now()), type:"food", timestamp:ts };
+                        var cd = Object.assign({}, dog.cooldownTimestamps||{}, { food:ts, fed:ts });
+                        onUpdate(Object.assign({},dog,{ lastFed:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
+                        if (earnTP) earnTP(TP_VALUES.food, "Gave "+dog.name+" food");
+                      }}>🍽️ Food</button>
+                      <button style={{ fontSize:13,padding:"7px 14px",background:C.blueFaint,border:"1px solid "+C.blue,color:C.blue,borderRadius:8,cursor:"pointer",fontWeight:700 }} onClick={function(){
+                        var ts = new Date().toISOString();
+                        var entry = { id:String(Date.now()), type:"water", timestamp:ts };
+                        var cd = Object.assign({}, dog.cooldownTimestamps||{}, { water:ts });
+                        onUpdate(Object.assign({},dog,{ lastWater:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
+                        if (earnTP) earnTP(TP_VALUES.water, "Gave "+dog.name+" water");
+                      }}>💧 Water</button>
+                    </div>
+                  )}
+                  {alert.type === "out" && (
+                    <button style={{ fontSize:13,padding:"7px 14px",background:C.blue,border:"1px solid "+C.blue,color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700 }} onClick={function(){
+                      var ts = new Date().toISOString();
+                      var entry = { id:String(Date.now()), type:"outside", timestamp:ts };
+                      var cd = Object.assign({}, dog.cooldownTimestamps||{}, { outside:ts });
+                      onUpdate(Object.assign({},dog,{ lastOutside:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
+                      if (earnTP) earnTP(TP_VALUES.outside, "Took "+dog.name+" outside");
+                    }}>Mark Outside</button>
+                  )}
+                  {(alert.type === "vax" || alert.type === "heat" || alert.type === "med" || alert.type === "appt") && (
+                    <button style={{ fontSize:12,padding:"5px 10px",background:C.accentFaint,border:"1px solid "+C.accent,color:C.accent,borderRadius:8,cursor:"pointer",fontWeight:600 }} onClick={function(){
+                      onSelect(dog);
+                      if (setActiveTab) setActiveTab(alert.type === "vax" ? "vaccines" : alert.type === "appt" ? "vet" : alert.type);
+                    }}>View</button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCooldownAlert }) {
   var C = useTheme();
   var [showPackBadges, setShowPackBadges] = useState(false);
@@ -5513,220 +5598,63 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
               <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
                 <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                   <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,margin:0 }}>⚠️ Action Required</p>
-                  {total > 3 && (
-                    <button 
-                      onClick={function(){ setShowAllAlerts(function(v){ return !v; }); }}
-                      style={{ 
-                        background:C.accentFaint,
-                        border:"1px solid "+C.accent,
-                        color:C.accent,
-                        cursor:"pointer",
-                        fontSize:13,
-                        fontWeight:800,
-                        padding:"7px 14px",
-                        borderRadius:8,
-                        display:"flex",
-                        alignItems:"center",
-                        gap:8,
-                        transition:"all .2s"
-                      }}
-                      onMouseEnter={function(e){ e.currentTarget.style.background=C.accent; e.currentTarget.style.color="#fff"; }}
-                      onMouseLeave={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}
-                      title={showAllAlerts?"Show less":"Show all "+total+" alerts"}>
-                      <span>{showAllAlerts?"Show Less":"View All ("+total+")"}</span>
-                      <span style={{ fontSize:12,transition:"transform .2s",transform:showAllAlerts?"rotate(180deg)":"rotate(0deg)",display:"inline-block" }}>▼</span>
-                    </button>
-                  )}
                 </div>
                 <button className="btnI" onClick={function(){ setAlertDismissed(true); }} title="Dismiss alerts">&#x2715;</button>
               </div>
               {(function(){
-                var allAlerts = []
-                  .concat(needsFeed.map(function(d){ return { type:"feed", dog:d }; }))
-                  .concat(needsOut.map(function(d){ return { type:"out", dog:d }; }))
-                  .concat(ovVaxDogs.map(function(d){ return { type:"vax", dog:d }; }))
-                  .concat(upAppts.map(function(a){ return { type:"appt", appt:a }; }))
-                  .concat(heatAlert.map(function(d){ return { type:"heat", dog:d }; }))
-                  .concat(medEnd.map(function(d){ return { type:"med", dog:d }; }));
-                
-                var displayAlerts = showAllAlerts ? allAlerts : allAlerts.slice(0, 3);
-                
-                return displayAlerts.map(function(item, idx){
-                  if(item.type === "feed") {
-                    var d = item.dog;
-                    var alertId = "feed-" + d.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                          <div style={{ width:26,height:26,borderRadius:"50%",background:C.accentFaint,border:"1px solid "+C.border,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
-                            {d.photo ? <img src={d.photo} alt={d.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : d.emoji}
-                          </div>
-                          <span style={{ color:C.text,fontSize:17,fontWeight:500 }}><strong style={{ fontWeight:800 }}>{d.name}</strong>{" — Feeding Overdue"}</span>
-                        </div>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button className="btnP" style={{ fontSize:13,padding:"6px 12px" }} onClick={function(){
-                            var cooldownTimestamps = d.cooldownTimestamps || {};
-                            var lastFedCooldown = cooldownTimestamps.fed;
-                            var fedCooldownMs = getFedCooldown(d);
-                            var fedCooldown = isOnCooldown(lastFedCooldown, fedCooldownMs);
-                            
-                            if (fedCooldown) {
-                              var remaining = getCooldownRemaining(lastFedCooldown, fedCooldownMs);
-                              setCooldownAlert({
-                                show: true,
-                                message: "You recently fed " + d.name + "! To prevent rapid logging and ensure accurate tracking, please wait before marking them as fed again.",
-                                remaining: formatCooldown(remaining)
-                              });
-                              return;
-                            }
-                            
-                            var ts = new Date().toISOString();
-                            var entry = { id: String(Date.now()), type:"fed", timestamp: ts };
-                            var updatedCooldowns = Object.assign({}, cooldownTimestamps, { fed: ts });
-                            onUpdate(Object.assign({},d,{ lastFed:ts, activityLog:(d.activityLog||[]).concat([entry]), cooldownTimestamps: updatedCooldowns }));
-                            if (earnTP) earnTP(TP_VALUES.fed, "Fed "+d.name);
-                          }}>Mark Fed</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  } else if(item.type === "out") {
-                    var d = item.dog;
-                    var alertId = "out-" + d.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                          <div style={{ width:26,height:26,borderRadius:"50%",background:C.blueFaint,border:"1px solid "+C.border,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0 }}>
-                            {d.photo ? <img src={d.photo} alt={d.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : d.emoji}
-                          </div>
-                          <span style={{ color:C.text,fontSize:17,fontWeight:500 }}><strong style={{ fontWeight:800 }}>{d.name}</strong>{" — Needs To Go Outside"}</span>
-                        </div>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button onClick={function(){
-                            var cooldownTimestamps = d.cooldownTimestamps || {};
-                            var lastOutsideCooldown = cooldownTimestamps.outside;
-                            var outCooldownMs = getOutsideCooldown(d);
-                            var outCooldown = isOnCooldown(lastOutsideCooldown, outCooldownMs);
-                            
-                            if (outCooldown) {
-                              var remaining = getCooldownRemaining(lastOutsideCooldown, outCooldownMs);
-                              setCooldownAlert({
-                                show: true,
-                                message: "You recently took " + d.name + " outside! To prevent rapid logging and ensure accurate tracking, please wait before marking them as outside again.",
-                                remaining: formatCooldown(remaining)
-                              });
-                              return;
-                            }
-                            
-                            var ts = new Date().toISOString();
-                            var entry = { id: String(Date.now()), type:"outside", timestamp: ts };
-                            var updatedCooldowns = Object.assign({}, cooldownTimestamps, { outside: ts });
-                            onUpdate(Object.assign({},d,{ lastOutside:ts, activityLog:(d.activityLog||[]).concat([entry]), cooldownTimestamps: updatedCooldowns }));
-                            if (earnTP) earnTP(TP_VALUES.outside, "Took "+d.name+" outside");
-                          }} style={{ fontSize:13,padding:"6px 12px",background:C.blue,border:"1px solid "+C.blue,color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700 }}>Mark Outside</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.blueFaint; e.currentTarget.style.color=C.blue; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  } else if(item.type === "vax") {
-                    var d = item.dog;
-                    var alertId = "vax-" + d.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <span style={{ color:C.text,fontSize:17,fontWeight:500 }}>💉 <strong style={{ fontWeight:800 }}>{d.name}</strong>{" — Overdue Vaccination(s)"}</span>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button onClick={function(){ 
-                            onSelect(d);
-                            if (setActiveTab) setActiveTab("vaccines");
-                            setTimeout(function(){ 
-                              var detailView = document.querySelector('[data-dogdetail="true"]');
-                              if (detailView) detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                          }} style={{ fontSize:13,padding:"6px 12px",background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,cursor:"pointer",fontWeight:600 }}>View</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.redFaint; e.currentTarget.style.color=C.red; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  } else if(item.type === "appt") {
-                    var a = item.appt;
-                    var du = daysUntil(a.date);
-                    var when = du===0?"today":du===1?"tomorrow":"in "+du+"d";
-                    var alertId = "appt-" + a.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <span style={{ color:C.text,fontSize:17,fontWeight:500 }}>🩺 <strong style={{ fontWeight:800 }}>{a.dog.name}</strong>{" — Vet Appt "+when+": "+a.reason}</span>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button onClick={function(){ 
-                            onSelect(a.dog);
-                            if (setActiveTab) setActiveTab("vet");
-                            setTimeout(function(){ 
-                              var detailView = document.querySelector('[data-dogdetail="true"]');
-                              if (detailView) detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                          }} style={{ fontSize:13,padding:"6px 12px",background:C.blueFaint,border:"1px solid "+C.blue,color:C.blue,borderRadius:8,cursor:"pointer",fontWeight:600 }}>View</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.blueFaint; e.currentTarget.style.color=C.blue; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  } else if(item.type === "heat") {
-                    var d = item.dog;
-                    var h = getHeatStatus(d);
-                    var alertId = "heat-" + d.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <span style={{ color:C.text,fontSize:17,fontWeight:500 }}>🌸 <strong style={{ fontWeight:800 }}>{d.name}</strong>{" — "+(h.inHeat?"In Heat (Day "+h.heatDay+")":"Heat in "+h.daysUntilNext+"Days")}</span>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button onClick={function(){ 
-                            onSelect(d);
-                            if (setActiveTab) setActiveTab("heat");
-                            setTimeout(function(){ 
-                              var detailView = document.querySelector('[data-dogdetail="true"]');
-                              if (detailView) detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                          }} style={{ fontSize:13,padding:"6px 12px",background:C.pinkFaint,border:"1px solid "+C.pink,color:C.pink,borderRadius:8,cursor:"pointer",fontWeight:600 }}>View</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.pinkFaint; e.currentTarget.style.color=C.pink; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  } else if(item.type === "med") {
-                    var d = item.dog;
-                    var alertId = "med-" + d.id;
-                    if (dismissedAlerts[alertId]) return null;
-                    return (
-                      <div key={alertId} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:7,paddingBottom:7,borderBottom:idx<displayAlerts.length-1?"1px solid "+C.border:"none" }}>
-                        <span style={{ color:C.text,fontSize:17,fontWeight:500 }}>💊 <strong style={{ fontWeight:800 }}>{d.name}</strong>{" — Medication Ending Soon"}</span>
-                        <div style={{ display:"flex",gap:6,alignItems:"center" }}>
-                          <button onClick={function(){ 
-                            onSelect(d);
-                            if (setActiveTab) setActiveTab("meds");
-                            setTimeout(function(){ 
-                              var detailView = document.querySelector('[data-dogdetail="true"]');
-                              if (detailView) detailView.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                            }, 100);
-                          }} style={{ fontSize:13,padding:"6px 12px",background:C.purpleFaint,border:"1px solid "+C.purple,color:C.purple,borderRadius:8,cursor:"pointer",fontWeight:600 }}>View</button>
-                          <button onClick={function(){ dismissAlert(alertId); }} style={{ width:24,height:24,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:14,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",transition:"all .15s" }}
-                            onMouseEnter={function(e){ e.currentTarget.style.background=C.purpleFaint; e.currentTarget.style.color=C.purple; }}
-                            onMouseLeave={function(e){ e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.muted; }}>×</button>
-                        </div>
-                      </div>
-                    );
-                  }
-                }).filter(function(item){ return item !== null; });
+                // Build per-dog alert map
+                var dogAlertMap = {};
+                var dogOrder = [];
+
+                function addAlert(dogId, dogObj, alert) {
+                  if (!dogAlertMap[dogId]) { dogAlertMap[dogId] = { dog: dogObj, alerts: [] }; dogOrder.push(dogId); }
+                  dogAlertMap[dogId].alerts.push(alert);
+                }
+
+                needsFeed.forEach(function(d){ addAlert(d.id, d, { type:"feed" }); });
+                needsOut.forEach(function(d){ addAlert(d.id, d, { type:"out" }); });
+                ovVaxDogs.forEach(function(d){ addAlert(d.id, d, { type:"vax" }); });
+                heatAlert.forEach(function(d){ addAlert(d.id, d, { type:"heat" }); });
+                medEnd.forEach(function(d){ addAlert(d.id, d, { type:"med" }); });
+                upAppts.forEach(function(a){ addAlert(a.dog.id, a.dog, { type:"appt", appt:a }); });
+
+                var MAX_VISIBLE = 2;
+                var displayDogs = showAllAlerts ? dogOrder : dogOrder.slice(0, MAX_VISIBLE);
+                var hasMore = dogOrder.length > MAX_VISIBLE;
+
+                return (
+                  <div>
+                    {hasMore && (
+                      <button
+                        onClick={function(){ setShowAllAlerts(function(v){ return !v; }); }}
+                        style={{
+                          background:C.accentFaint, border:"1px solid "+C.accent, color:C.accent,
+                          cursor:"pointer", fontSize:13, fontWeight:800, padding:"7px 14px",
+                          borderRadius:8, display:"flex", alignItems:"center", gap:8,
+                          transition:"all .2s", marginBottom:10
+                        }}
+                        onMouseEnter={function(e){ e.currentTarget.style.background=C.accent; e.currentTarget.style.color="#fff"; }}
+                        onMouseLeave={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}>
+                        <span>{showAllAlerts ? "Show Less" : "View All ("+dogOrder.length+")"}</span>
+                        <span style={{ fontSize:12, transition:"transform .2s", transform:showAllAlerts?"rotate(180deg)":"rotate(0deg)", display:"inline-block" }}>▼</span>
+                      </button>
+                    )}
+                    {displayDogs.map(function(dogId) {
+                      var entry = dogAlertMap[dogId];
+                      if (!entry) return null;
+                      var d = entry.dog;
+                      var alerts = entry.alerts;
+                      if (dismissedAlerts["group-" + dogId]) return null;
+                      return (
+                        <DogAlertGroup key={dogId + "-" + showAllAlerts} dog={d} alerts={alerts} C={C}
+                          onSelect={onSelect} setActiveTab={setActiveTab}
+                          onUpdate={onUpdate} earnTP={earnTP} setCooldownAlert={setCooldownAlert}
+                          dismissAlert={dismissAlert} dismissGroup={function(){ dismissAlert("group-" + dogId); }}
+                        />
+                      );
+                    }).filter(Boolean)}
+                  </div>
+                );
               })()}
             </div>
           )}
