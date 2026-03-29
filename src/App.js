@@ -3094,14 +3094,14 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
 
-    // Only allow PNG and PDF
-    var isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+    // Only allow images and PDF
+    var isImage = file.type.startsWith("image/");
     var isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isPng && !isPdf) {
+    if (!isImage && !isPdf) {
       setAlertDialog({
         show: true,
         title: "File Type Not Allowed",
-        message: "Only PNG images and PDF files can be uploaded. Please choose a .png or .pdf file."
+        message: "Only image files (PNG, JPG, etc.) and PDF files can be uploaded."
       });
       e.target.value = "";
       return;
@@ -3263,7 +3263,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
             onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
             <span style={{ fontSize:20 }}>📤</span>
             {uploading ? "Uploading..." : "Choose File"}
-            <input type="file" accept="image/png,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
+            <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
           </label>
           <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
             <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"8px 12px" }}>
@@ -3310,7 +3310,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
           <p style={{ color:C.muted,fontSize:16,marginBottom:24 }}>Upload your first document to get started</p>
           <label style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer" }}>
             📤 Upload Document
-            <input type="file" accept="image/png,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
+            <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
           </label>
         </div>
       ) : (
