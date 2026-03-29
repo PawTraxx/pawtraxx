@@ -1331,7 +1331,7 @@ function PhotoUpload({ current, onPhoto, size, shape, placeholder, label }) {
   function handleFile(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("Image must be under 5MB."); return; }
+    if (file.size > 3 * 1024 * 1024) { alert("Image must be under 5MB."); return; }
     var reader = new FileReader();
     reader.onload = function(ev) { setPending(ev.target.result); };
     reader.readAsDataURL(file);
@@ -3037,10 +3037,75 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var [sortBy, setSortBy] = useState("date"); // "date" | "name" | "type" | "size"
   var [alertDialog, setAlertDialog] = useState({ show: false, title: "", message: "" });
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
+  var [docxHtml, setDocxHtml] = useState(null);
+  var [docxLoading, setDocxLoading] = useState(false);
+  var [pdfBlobUrl, setPdfBlobUrl] = useState(null);
+
+  function isDocx(doc) {
+    return doc && (doc.type.includes("word") || doc.type.includes("document") || doc.name.endsWith(".docx") || doc.name.endsWith(".doc"));
+  }
+
+  function openPreview(doc) {
+    setPreviewDoc(doc);
+    setZoomLevel(100);
+    setDocxHtml(null);
+    setPdfBlobUrl(null);
+    if (doc.type.includes("pdf")) {
+      try {
+        var base64 = doc.data.split(",")[1];
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        var blob = new Blob([bytes], { type:"application/pdf" });
+        setPdfBlobUrl(URL.createObjectURL(blob));
+      } catch(e) { setPdfBlobUrl(null); }
+    }
+    if (isDocx(doc)) {
+      setDocxLoading(true);
+      // Load mammoth.js dynamically and convert docx to HTML
+      var script = document.createElement("script");
+      script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
+      script.onload = function() {
+        // Convert base64 data URL to ArrayBuffer
+        var base64 = doc.data.split(",")[1];
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        window.mammoth.convertToHtml({ arrayBuffer: bytes.buffer })
+          .then(function(result) {
+            setDocxHtml(result.value);
+            setDocxLoading(false);
+          })
+          .catch(function() {
+            setDocxHtml("<p style='color:red'>Could not render this document.</p>");
+            setDocxLoading(false);
+          });
+      };
+      script.onerror = function() {
+        setDocxHtml("<p style='color:red'>Failed to load document renderer.</p>");
+        setDocxLoading(false);
+      };
+      if (!window.mammoth) document.head.appendChild(script);
+      else script.onload();
+    }
+  }
 
   function handleFileUpload(e) {
     var file = e.target.files && e.target.files[0];
     if (!file) return;
+
+    // Only allow PNG and PDF
+    var isPng = file.type === "image/png" || file.name.toLowerCase().endsWith(".png");
+    var isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isPng && !isPdf) {
+      setAlertDialog({
+        show: true,
+        title: "File Type Not Allowed",
+        message: "Only PNG images and PDF files can be uploaded. Please choose a .png or .pdf file."
+      });
+      e.target.value = "";
+      return;
+    }
     
     console.log("File selected:", file.name, "Length:", file.name.length);
     
@@ -3060,18 +3125,18 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     
     console.log("Filename length OK");
     
-    if (file.size > 5 * 1024 * 1024) { 
+    if (file.size > 3 * 1024 * 1024) { 
       setAlertDialog({
         show: true,
         title: "File Too Large!",
-        message: "File size: " + (file.size / (1024 * 1024)).toFixed(1) + " MB\n\nMaximum per file: 5 MB\n\nPlease choose a smaller file."
+        message: "File size: " + (file.size / (1024 * 1024)).toFixed(1) + " MB\n\nMaximum per file: 3 MB\n\nPlease choose a smaller file."
       });
       e.target.value = ""; 
       return; 
     }
     
-    // Check storage limit (50MB per dog)
-    var MAX_STORAGE = 50 * 1024 * 1024;
+    // Check storage limit (20MB per dog)
+    var MAX_STORAGE = 20 * 1024 * 1024;
     var usedStorage = docs.reduce(function(total, doc) { return total + (doc.size || 0); }, 0);
     var remainingStorage = MAX_STORAGE - usedStorage;
     
@@ -3083,7 +3148,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
       setAlertDialog({
         show: true,
         title: "Not Enough Storage!",
-        message: "This file is " + fileSizeMB + " MB but you only have " + remainingMB + " MB remaining.\n\nYou've used " + usedMB + " MB of your 50 MB limit for " + dog.name + ".\n\nPlease delete some files or choose a smaller file."
+        message: "This file is " + fileSizeMB + " MB but you only have " + remainingMB + " MB remaining.\n\nYou've used " + usedMB + " MB of your 20 MB limit for " + dog.name + ".\n\nPlease delete some files or choose a smaller file."
       });
       e.target.value = "";
       return;
@@ -3163,7 +3228,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   });
 
   // Calculate storage usage
-  var MAX_STORAGE = 50 * 1024 * 1024; // 50MB total per dog
+  var MAX_STORAGE = 20 * 1024 * 1024; // 20MB total per dog
   var usedStorage = docs.reduce(function(total, doc) { return total + (doc.size || 0); }, 0);
   var remainingStorage = MAX_STORAGE - usedStorage;
   var usedMB = (usedStorage / (1024 * 1024)).toFixed(1);
@@ -3198,11 +3263,11 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
             onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
             <span style={{ fontSize:20 }}>📤</span>
             {uploading ? "Uploading..." : "Choose File"}
-            <input type="file" accept="*/*" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
+            <input type="file" accept="image/png,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
           </label>
           <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
             <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"8px 12px" }}>
-              <span style={{ fontSize:13,color:C.accent,fontWeight:600 }}>MAX PER FILE: 5MB</span>
+              <span style={{ fontSize:13,color:C.accent,fontWeight:600 }}>MAX PER FILE: 3MB</span>
             </div>
             <div style={{ background:C.blueFaint,border:"1px solid "+C.blue,borderRadius:8,padding:"8px 12px" }}>
               <span style={{ fontSize:13,color:C.blue,fontWeight:600 }}>{docs.length} {docs.length === 1 ? "File" : "Files"}</span>
@@ -3215,7 +3280,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
           <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
             <p style={{ fontSize:14,fontWeight:700,color:C.text }}>Storage for {dog.name}</p>
             <p style={{ fontSize:14,fontWeight:800,color:usedPercent > 90 ? C.red : usedPercent > 70 ? C.yellow : C.accent }}>
-              {usedMB} MB / 50 MB
+              {usedMB} MB / 20 MB
             </p>
           </div>
           <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden",marginBottom:8 }}>
@@ -3245,7 +3310,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
           <p style={{ color:C.muted,fontSize:16,marginBottom:24 }}>Upload your first document to get started</p>
           <label style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer" }}>
             📤 Upload Document
-            <input type="file" accept="*/*" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
+            <input type="file" accept="image/png,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
           </label>
         </div>
       ) : (
@@ -3302,7 +3367,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
                   </div>
 
                   <div style={{ display:"flex",gap:6 }}>
-                    <button onClick={function(){ setPreviewDoc(doc); setZoomLevel(100); }}
+                    <button onClick={function(){ openPreview(doc); }}
                       style={{ flex:1,background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s" }}
                       onMouseEnter={function(e){ e.currentTarget.style.background=C.blue; e.currentTarget.style.color="#fff"; }}
                       onMouseLeave={function(e){ e.currentTarget.style.background=C.blueFaint; e.currentTarget.style.color=C.blue; }}>
@@ -3345,7 +3410,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
             onClick={function(e){ e.stopPropagation(); }}>
             <h3 style={{ fontFamily:"Fraunces",fontSize:15,color:"#fff",fontWeight:700,margin:0,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginRight:8 }}>{previewDoc.name}</h3>
             <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-              {(previewDoc.type.includes("image") || previewDoc.type.includes("pdf")) && (
+              {(previewDoc.type.includes("image") || previewDoc.type.includes("pdf") || isDocx(previewDoc)) && (
                 <>
                   <button type="button" onClick={function(){ setZoomLevel(Math.max(25, zoomLevel - 25)); }}
                     style={{ background:"rgba(244,162,77,0.2)",border:"1px solid #f4a24d",color:"#f4a24d",borderRadius:8,padding:"6px 12px",fontSize:16,fontWeight:700,cursor:"pointer" }}>−</button>
@@ -3364,10 +3429,32 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
           <div style={{ flex:1,overflow:"auto",display:"flex",alignItems:"center",justifyContent:"center",padding:8 }}
             onClick={function(e){ e.stopPropagation(); }}>
             {previewDoc.type.includes("image") ? (
-              <img src={previewDoc.data} alt={previewDoc.name}
-                style={{ maxWidth:"100%",maxHeight:"100%",objectFit:"contain",transform:"scale("+(zoomLevel/100)+")",transformOrigin:"center center",transition:"transform .2s" }} />
+              <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"auto" }}>
+                <img src={previewDoc.data} alt={previewDoc.name}
+                  style={{ 
+                    maxWidth: zoomLevel === 100 ? "100%" : (zoomLevel + "%"),
+                    maxHeight: zoomLevel === 100 ? "100%" : "none",
+                    width: zoomLevel === 100 ? "auto" : "auto",
+                    height: zoomLevel === 100 ? "auto" : "auto",
+                    objectFit:"contain",
+                    display:"block",
+                    transition:"all .2s"
+                  }} />
+              </div>
             ) : previewDoc.type.includes("pdf") ? (
-              <iframe src={previewDoc.data} style={{ width:"100%",height:"100%",border:"none",borderRadius:8,transform:"scale("+(zoomLevel/100)+")",transformOrigin:"top center",transition:"transform .2s" }} title={previewDoc.name} />
+              pdfBlobUrl ? (
+                <iframe src={pdfBlobUrl} style={{ width:"100%",height:"100%",border:"none",borderRadius:8 }} title={previewDoc.name} />
+              ) : (
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"rgba(255,255,255,0.6)",fontSize:15 }}>Loading PDF...</div>
+              )
+            ) : isDocx(previewDoc) ? (
+              <div style={{ width:"100%",height:"100%",overflow:"auto",background:"#fff",borderRadius:8,padding:"24px 32px",color:"#222",fontSize:15,lineHeight:1.7 }}>
+                {docxLoading ? (
+                  <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#888",fontSize:16 }}>Loading document...</div>
+                ) : (
+                  <div dangerouslySetInnerHTML={{ __html: docxHtml || "" }} />
+                )}
+              </div>
             ) : (
               <div style={{ textAlign:"center",padding:40 }}>
                 <div style={{ fontSize:64,marginBottom:16 }}>{getFileIcon(previewDoc.type)}</div>
