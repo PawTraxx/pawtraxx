@@ -4487,7 +4487,11 @@ function LogDayGroup({ day, entries, C, dog, onUpdate, setConfirmDialog }) {
           <p style={{ fontSize:11,fontWeight:800,color:C.muted,textTransform:"uppercase",letterSpacing:".08em",margin:0 }}>{day}</p>
           <span style={{ background:C.accentFaint,color:C.accent,fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:99 }}>{entries.length} {entries.length===1?"entry":"entries"}</span>
         </div>
-        <span style={{ color:C.muted,fontSize:14,display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s" }}>⌄</span>
+        <span style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",transition:"transform .2s",transform:open?"rotate(180deg)":"rotate(0deg)" }}>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 6L8 10L12 6" stroke={C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </span>
       </button>
       {open && (
         <div style={{ background:C.card,border:"1px solid "+C.border,borderTop:"none",borderRadius:"0 0 14px 14px",overflow:"hidden" }}>
@@ -5313,9 +5317,11 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
 // main dashboard
 function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnTP, setCooldownAlert, dismissAlert, dismissGroup }) {
   var [open, setOpen] = useState(false);
+  var [confirmDismiss, setConfirmDismiss] = useState(false);
   var actionLabels = {
-    feed: { icon:"🍽️", label:"Food & Water Overdue", color:C.green },
-    out:  { icon:"🌳", label:"Needs Outside", color:C.blue },
+    food: { icon:"🍽️", label:"Food Overdue", color:C.green },
+    water: { icon:"💧", label:"Water Overdue", color:C.blue },
+    out:  { icon:"🌳", label:"Needs Outside", color:C.accent },
     vax:  { icon:"💉", label:"Overdue Vaccination", color:C.red },
     heat: { icon:"🌸", label:"Heat Cycle Alert", color:C.pink },
     med:  { icon:"💊", label:"Medication Ending Soon", color:C.purple },
@@ -5335,9 +5341,23 @@ function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnT
           <span style={{ background:C.accent,color:"#fff",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:99 }}>{alerts.length}</span>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-          <span style={{ fontSize:13,color:C.muted,display:"inline-block",transform:open?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s" }}>⌄</span>
-          <button onClick={function(e){ e.stopPropagation(); dismissGroup(); }}
-            style={{ width:22,height:22,borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.muted,cursor:"pointer",fontSize:13,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+          <span style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",transition:"transform .2s",transform:open?"rotate(180deg)":"rotate(0deg)" }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 6L8 10L12 6" stroke={C.muted} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          {confirmDismiss ? (
+            <div style={{ display:"flex",alignItems:"center",gap:4 }} onClick={function(e){ e.stopPropagation(); }}>
+              <span style={{ fontSize:13,color:C.text,fontWeight:600 }}>Dismiss?</span>
+              <button onClick={function(e){ e.stopPropagation(); dismissGroup(); }}
+                style={{ padding:"5px 12px",borderRadius:6,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700 }}>Yes</button>
+              <button onClick={function(e){ e.stopPropagation(); setConfirmDismiss(false); }}
+                style={{ padding:"5px 12px",borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.text,cursor:"pointer",fontSize:13,fontWeight:700 }}>No</button>
+            </div>
+          ) : (
+            <button onClick={function(e){ e.stopPropagation(); setConfirmDismiss(true); }}
+              style={{ width:26,height:26,borderRadius:8,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:15,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>×</button>
+          )}
         </div>
       </button>
       {/* Alert rows */}
@@ -5352,33 +5372,33 @@ function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnT
                   <span style={{ fontSize:16 }}>{info.icon}</span>
                   <span style={{ fontSize:14,color:C.text,fontWeight:600 }}>{info.label}</span>
                 </div>
-                <div style={{ display:"flex",gap:6 }}>
-                  {alert.type === "feed" && (
-                    <div style={{ display:"flex",gap:6 }}>
-                      <button className="btnP" style={{ fontSize:13,padding:"7px 14px" }} onClick={function(){
-                        var ts = new Date().toISOString();
-                        var entry = { id:String(Date.now()), type:"food", timestamp:ts };
-                        var cd = Object.assign({}, dog.cooldownTimestamps||{}, { food:ts, fed:ts });
-                        onUpdate(Object.assign({},dog,{ lastFed:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
-                        if (earnTP) earnTP(TP_VALUES.food, "Gave "+dog.name+" food");
-                      }}>🍽️ Food</button>
-                      <button style={{ fontSize:13,padding:"7px 14px",background:C.blueFaint,border:"1px solid "+C.blue,color:C.blue,borderRadius:8,cursor:"pointer",fontWeight:700 }} onClick={function(){
-                        var ts = new Date().toISOString();
-                        var entry = { id:String(Date.now()), type:"water", timestamp:ts };
-                        var cd = Object.assign({}, dog.cooldownTimestamps||{}, { water:ts });
-                        onUpdate(Object.assign({},dog,{ lastWater:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
-                        if (earnTP) earnTP(TP_VALUES.water, "Gave "+dog.name+" water");
-                      }}>💧 Water</button>
-                    </div>
+                <div style={{ display:"flex",justifyContent:"center" }}>
+                  {alert.type === "food" && (
+                    <button style={{ fontSize:13,padding:"8px 16px",background:"#2d8a4e",border:"1px solid #2d8a4e",color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700,width:140,textAlign:"center" }} onClick={function(){
+                      var ts = new Date().toISOString();
+                      var entry = { id:String(Date.now()), type:"food", timestamp:ts };
+                      var cd = Object.assign({}, dog.cooldownTimestamps||{}, { food:ts, fed:ts });
+                      onUpdate(Object.assign({},dog,{ lastFed:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
+                      if (earnTP) earnTP(TP_VALUES.food, "Gave "+dog.name+" food");
+                    }}>🍽️ Gave Food</button>
+                  )}
+                  {alert.type === "water" && (
+                    <button style={{ fontSize:13,padding:"8px 16px",background:"#1a6fa8",border:"1px solid #1a6fa8",color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700,width:140,textAlign:"center" }} onClick={function(){
+                      var ts = new Date().toISOString();
+                      var entry = { id:String(Date.now()), type:"water", timestamp:ts };
+                      var cd = Object.assign({}, dog.cooldownTimestamps||{}, { water:ts });
+                      onUpdate(Object.assign({},dog,{ lastWater:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
+                      if (earnTP) earnTP(TP_VALUES.water, "Gave "+dog.name+" water");
+                    }}>💧 Gave Water</button>
                   )}
                   {alert.type === "out" && (
-                    <button style={{ fontSize:13,padding:"7px 14px",background:C.blue,border:"1px solid "+C.blue,color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700 }} onClick={function(){
+                    <button style={{ fontSize:13,padding:"8px 16px",background:"#c47a1a",border:"1px solid #c47a1a",color:"#fff",borderRadius:8,cursor:"pointer",fontWeight:700,width:140,textAlign:"center" }} onClick={function(){
                       var ts = new Date().toISOString();
                       var entry = { id:String(Date.now()), type:"outside", timestamp:ts };
                       var cd = Object.assign({}, dog.cooldownTimestamps||{}, { outside:ts });
                       onUpdate(Object.assign({},dog,{ lastOutside:ts, activityLog:(dog.activityLog||[]).concat([entry]), cooldownTimestamps:cd }));
                       if (earnTP) earnTP(TP_VALUES.outside, "Took "+dog.name+" outside");
-                    }}>Mark Outside</button>
+                    }}>🌳 Mark Outside</button>
                   )}
                   {(alert.type === "vax" || alert.type === "heat" || alert.type === "med" || alert.type === "appt") && (
                     <button style={{ fontSize:12,padding:"5px 10px",background:C.accentFaint,border:"1px solid "+C.accent,color:C.accent,borderRadius:8,cursor:"pointer",fontWeight:600 }} onClick={function(){
@@ -5405,6 +5425,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
   var [showPackDocs, setShowPackDocs] = useState(false);
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
   var needsFeed = dogs.filter(function(d){ return !d.lastFed || (Date.now()-new Date(d.lastFed)) > getFedCooldown(d); });
+  var needsWater = dogs.filter(function(d){ return !d.lastWater || (Date.now()-new Date(d.lastWater)) > getFedCooldown(d); });
   var needsOut = dogs.filter(function(d){ return !d.lastOutside || (Date.now()-new Date(d.lastOutside)) > getOutsideCooldown(d); });
   var heatAlert = dogs.filter(function(d){ if(d.gender!=="female"||!d.lastHeatDate)return false; var h=getHeatStatus(d); return h&&(h.upcoming||h.inHeat); });
   var ovVaxDogs = dogs.filter(function(d){ return (d.vaccines||[]).some(function(v){ return v.nextDate&&isOverdue(v.nextDate); }); });
@@ -5611,7 +5632,8 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                   dogAlertMap[dogId].alerts.push(alert);
                 }
 
-                needsFeed.forEach(function(d){ addAlert(d.id, d, { type:"feed" }); });
+                needsFeed.forEach(function(d){ addAlert(d.id, d, { type:"food" }); });
+                needsWater.forEach(function(d){ addAlert(d.id, d, { type:"water" }); });
                 needsOut.forEach(function(d){ addAlert(d.id, d, { type:"out" }); });
                 ovVaxDogs.forEach(function(d){ addAlert(d.id, d, { type:"vax" }); });
                 heatAlert.forEach(function(d){ addAlert(d.id, d, { type:"heat" }); });
@@ -5635,7 +5657,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                         }}
                         onMouseEnter={function(e){ e.currentTarget.style.background=C.accent; e.currentTarget.style.color="#fff"; }}
                         onMouseLeave={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}>
-                        <span>{showAllAlerts ? "Show Less" : "View All ("+dogOrder.length+")"}</span>
+                        <span>{showAllAlerts ? "Show Less" : "View All"}</span>
                         <span style={{ fontSize:12, transition:"transform .2s", transform:showAllAlerts?"rotate(180deg)":"rotate(0deg)", display:"inline-block" }}>▼</span>
                       </button>
                     )}
@@ -6155,6 +6177,12 @@ function AdminDashboard({ onExit }) {
     );
     delete all[email];
     localStorage.setItem("pt_users", JSON.stringify(all));
+    // Unsubscribe from push server
+    fetch("https://pawtraks-push-server-production.up.railway.app/unsubscribe", {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: email })
+    }).catch(function(){});
     setSelectedUser(null);
     setRefresh(function(r){ return r+1; });
   }
@@ -7717,6 +7745,13 @@ export default function PawTraks() {
               delete all[deletedUserEmail];
               localStorage.setItem("pt_users", JSON.stringify(all));
               localStorage.removeItem("pt_session");
+
+              // Unsubscribe from push server so no more notifications
+              fetch(PUSH_SERVER + '/unsubscribe', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: deletedUserEmail })
+              }).catch(function(){});
               
               // Log deletion notification for admin
               var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
