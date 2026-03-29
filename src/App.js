@@ -7237,9 +7237,7 @@ export default function PawTraks() {
             )}
 
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-              {activeDog && (
-                <span style={{ fontFamily:"Fraunces",fontSize:16,fontWeight:800,color:C.text }}>{activeDog.name}</span>
-              )}
+              <span style={{ fontFamily:"Fraunces",fontSize:16,fontWeight:800,color:C.text }}>{user.name}</span>
               <button onClick={function(){ setShowMobileMenu(true); }}
                 style={{ width:36,height:36,borderRadius:"50%",background:C.bg,border:"2px solid "+C.border,overflow:"hidden",display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer",padding:0,flexShrink:0 }}>
                 {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <span style={{ fontSize:17 }}>👤</span>}
