@@ -3127,10 +3127,9 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     var formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", "PawTraks_uploads");
-    formData.append("cloud_name", "pawtraxx1");
 
     var resourceType = file.type.includes("pdf") ? "raw" : "image";
-    var url = "https://api.cloudinary.com/v1_1/pawtraxx1/" + resourceType + "/upload";
+    var uploadUrl = "https://api.cloudinary.com/v1_1/pawtraxx1/" + resourceType + "/upload";
 
     var xhr = new XMLHttpRequest();
     xhr.upload.onprogress = function(ev) {
@@ -3152,7 +3151,9 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         setUploading(false);
         setUploadProgress(0);
       } else {
-        setAlertDialog({ show:true, title:"Upload Failed", message:"Could not upload file. Please try again." });
+        var errMsg = "Upload failed (status " + xhr.status + ")";
+        try { var errRes = JSON.parse(xhr.responseText); errMsg = errRes.error && errRes.error.message ? errRes.error.message : errMsg; } catch(e){}
+        setAlertDialog({ show:true, title:"Upload Failed", message:errMsg });
         setUploading(false);
         setUploadProgress(0);
       }
@@ -3162,7 +3163,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
       setUploading(false);
       setUploadProgress(0);
     };
-    xhr.open("POST", url);
+    xhr.open("POST", uploadUrl);
     xhr.send(formData);
     e.target.value = "";
   }
