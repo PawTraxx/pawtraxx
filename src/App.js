@@ -3032,7 +3032,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var docs = dog.documents || [];
   var [uploading, setUploading] = useState(false);
   var [uploadProgress, setUploadProgress] = useState(0);
-  var uploadCancelRef = React.useRef(false);
+  var uploadCancelRef = useRef(false);
   var [previewDoc, setPreviewDoc] = useState(null);
   var [zoomLevel, setZoomLevel] = useState(100);
   var [searchQuery, setSearchQuery] = useState("");
