@@ -3051,45 +3051,8 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     setPreviewDoc(doc);
     setZoomLevel(100);
     setDocxHtml(null);
-    setPdfBlobUrl(null);
-    if (doc.type.includes("pdf")) {
-      try {
-        var base64 = doc.data.split(",")[1];
-        var binary = atob(base64);
-        var bytes = new Uint8Array(binary.length);
-        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        var blob = new Blob([bytes], { type:"application/pdf" });
-        setPdfBlobUrl(URL.createObjectURL(blob));
-      } catch(e) { setPdfBlobUrl(null); }
-    }
-    if (isDocx(doc)) {
-      setDocxLoading(true);
-      // Load mammoth.js dynamically and convert docx to HTML
-      var script = document.createElement("script");
-      script.src = "https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js";
-      script.onload = function() {
-        // Convert base64 data URL to ArrayBuffer
-        var base64 = doc.data.split(",")[1];
-        var binary = atob(base64);
-        var bytes = new Uint8Array(binary.length);
-        for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        window.mammoth.convertToHtml({ arrayBuffer: bytes.buffer })
-          .then(function(result) {
-            setDocxHtml(result.value);
-            setDocxLoading(false);
-          })
-          .catch(function() {
-            setDocxHtml("<p style='color:red'>Could not render this document.</p>");
-            setDocxLoading(false);
-          });
-      };
-      script.onerror = function() {
-        setDocxHtml("<p style='color:red'>Failed to load document renderer.</p>");
-        setDocxLoading(false);
-      };
-      if (!window.mammoth) document.head.appendChild(script);
-      else script.onload();
-    }
+    // Use Cloudinary URL directly — works for both images and PDFs
+    setPdfBlobUrl(doc.url || doc.data || null);
   }
 
   function handleFileUpload(e) {
@@ -3160,40 +3123,47 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     setUploading(true);
     setUploadProgress(0);
     uploadCancelRef.current = false;
-    var reader = new FileReader();
-    reader.onprogress = function(ev) {
-      if (ev.lengthComputable) {
-        setUploadProgress(Math.round((ev.loaded / ev.total) * 80));
-      }
+
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "PawTraks_uploads");
+    formData.append("cloud_name", "pawtraxx1");
+
+    var resourceType = file.type.includes("pdf") ? "raw" : "image";
+    var url = "https://api.cloudinary.com/v1_1/pawtraxx1/" + resourceType + "/upload";
+
+    var xhr = new XMLHttpRequest();
+    xhr.upload.onprogress = function(ev) {
+      if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
     };
-    reader.onload = function(ev) {
-      if (uploadCancelRef.current) {
-        setUploading(false);
-        setUploadProgress(0);
-        return;
-      }
-      setUploadProgress(90);
-      setTimeout(function() {
-        if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return; }
+    xhr.onload = function() {
+      if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return; }
+      if (xhr.status === 200) {
+        var res = JSON.parse(xhr.responseText);
         var newDoc = {
           id: String(Date.now()),
           name: file.name,
           type: file.type,
-          data: ev.target.result,
+          url: res.secure_url,
           uploadedAt: new Date().toISOString(),
           size: file.size
         };
         onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
         setUploading(false);
         setUploadProgress(0);
-        console.log("File uploaded successfully");
-      }, 100);
+      } else {
+        setAlertDialog({ show:true, title:"Upload Failed", message:"Could not upload file. Please try again." });
+        setUploading(false);
+        setUploadProgress(0);
+      }
     };
-    reader.onerror = function() {
+    xhr.onerror = function() {
+      setAlertDialog({ show:true, title:"Upload Failed", message:"Network error. Please check your connection and try again." });
       setUploading(false);
       setUploadProgress(0);
     };
-    reader.readAsDataURL(file);
+    xhr.open("POST", url);
+    xhr.send(formData);
     e.target.value = "";
   }
 
@@ -3413,7 +3383,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
                       onMouseLeave={function(e){ e.currentTarget.style.background=C.blueFaint; e.currentTarget.style.color=C.blue; }}>
                       👁️ Preview
                     </button>
-                    <a href={doc.data} download={doc.name} style={{ flex:1,textDecoration:"none" }}>
+                    <a href={doc.url || doc.data} download={doc.name} style={{ flex:1,textDecoration:"none" }}>
                       <button style={{ width:"100%",background:C.accentFaint,border:"1.5px solid "+C.accent,color:C.accent,borderRadius:8,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s" }}
                         onMouseEnter={function(e){ e.currentTarget.style.background=C.accent; e.currentTarget.style.color="#fff"; }}
                         onMouseLeave={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}>
@@ -3470,7 +3440,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
             onClick={function(e){ e.stopPropagation(); }}>
             {previewDoc.type.includes("image") ? (
               <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"auto" }}>
-                <img src={previewDoc.data} alt={previewDoc.name}
+                <img src={previewDoc.url || previewDoc.data} alt={previewDoc.name}
                   style={{ 
                     maxWidth: zoomLevel === 100 ? "100%" : (zoomLevel + "%"),
                     maxHeight: zoomLevel === 100 ? "100%" : "none",
@@ -3482,11 +3452,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
                   }} />
               </div>
             ) : previewDoc.type.includes("pdf") ? (
-              pdfBlobUrl ? (
-                <iframe src={pdfBlobUrl} style={{ width:"100%",height:"100%",border:"none",borderRadius:8 }} title={previewDoc.name} />
-              ) : (
-                <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"rgba(255,255,255,0.6)",fontSize:15 }}>Loading PDF...</div>
-              )
+              <iframe src={previewDoc.url || pdfBlobUrl} style={{ width:"100%",height:"100%",border:"none",borderRadius:8 }} title={previewDoc.name} />
             ) : isDocx(previewDoc) ? (
               <div style={{ width:"100%",height:"100%",overflow:"auto",background:"#fff",borderRadius:8,padding:"24px 32px",color:"#222",fontSize:15,lineHeight:1.7 }}>
                 {docxLoading ? (
@@ -5930,7 +5896,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                                   <p style={{ fontSize:12,color:C.muted,whiteSpace:"nowrap" }}>{formatFileSize(doc.size)} · {timeAgo(doc.uploadedAt)}</p>
                                 </div>
                                 <div style={{ display:"flex",gap:8,flexShrink:0 }}>
-                                  <a href={doc.data} download={doc.name} style={{ textDecoration:"none" }}>
+                                  <a href={doc.url || doc.data} download={doc.name} style={{ textDecoration:"none" }}>
                                     <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
                                       Download
                                     </button>
