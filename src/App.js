@@ -3129,42 +3129,45 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     formData.append("upload_preset", "PawTraks_uploads");
 
     var resourceType = file.type.includes("pdf") ? "raw" : "image";
-    var uploadUrl = "https://api.cloudinary.com/v1_1/pawtraxx1/" + resourceType + "/upload";
+    var uploadUrl = "https://api.cloudinary.com/v1_1/dos1fywbj/" + resourceType + "/upload";
 
-    var xhr = new XMLHttpRequest();
-    xhr.upload.onprogress = function(ev) {
-      if (ev.lengthComputable) setUploadProgress(Math.round((ev.loaded / ev.total) * 100));
-    };
-    xhr.onload = function() {
+    // Simulate progress since fetch doesn't support upload progress
+    var progressInterval = setInterval(function() {
+      setUploadProgress(function(p) { return p < 85 ? p + 5 : p; });
+    }, 300);
+
+    fetch(uploadUrl, {
+      method: "POST",
+      body: formData
+    })
+    .then(function(res) {
+      clearInterval(progressInterval);
       if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return; }
-      if (xhr.status === 200) {
-        var res = JSON.parse(xhr.responseText);
-        var newDoc = {
-          id: String(Date.now()),
-          name: file.name,
-          type: file.type,
-          url: res.secure_url,
-          uploadedAt: new Date().toISOString(),
-          size: file.size
-        };
-        onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
-        setUploading(false);
-        setUploadProgress(0);
-      } else {
-        var errMsg = "Upload failed (status " + xhr.status + ")";
-        try { var errRes = JSON.parse(xhr.responseText); errMsg = errRes.error && errRes.error.message ? errRes.error.message : errMsg; } catch(e){}
-        setAlertDialog({ show:true, title:"Upload Failed", message:errMsg });
-        setUploading(false);
-        setUploadProgress(0);
-      }
-    };
-    xhr.onerror = function() {
-      setAlertDialog({ show:true, title:"Upload Failed", message:"Network error. Please check your connection and try again." });
-      setUploading(false);
-      setUploadProgress(0);
-    };
-    xhr.open("POST", uploadUrl);
-    xhr.send(formData);
+      return res.json().then(function(data) {
+        if (res.ok && data.secure_url) {
+          setUploadProgress(100);
+          var newDoc = {
+            id: String(Date.now()),
+            name: file.name,
+            type: file.type,
+            url: data.secure_url,
+            uploadedAt: new Date().toISOString(),
+            size: file.size
+          };
+          onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+          setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
+        } else {
+          var msg = data.error && data.error.message ? data.error.message : "Upload failed. Please try again.";
+          setAlertDialog({ show:true, title:"Upload Failed", message:msg });
+          setUploading(false); setUploadProgress(0);
+        }
+      });
+    })
+    .catch(function(err) {
+      clearInterval(progressInterval);
+      setAlertDialog({ show:true, title:"Upload Failed", message:"Network error: " + err.message });
+      setUploading(false); setUploadProgress(0);
+    });
     e.target.value = "";
   }
 
