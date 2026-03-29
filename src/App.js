@@ -5618,22 +5618,21 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
           {total > 0 && !alertDismissed && (
             <div style={{ background:C.accentDark,border:"1px solid "+C.accent,borderRadius:16,padding:18,marginBottom:20 }}>
               <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12 }}>
-                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-                  <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,margin:0 }}>⚠️ Action Required</p>
-                </div>
-                {confirmDismissAll ? (
-                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
-                    <span style={{ fontSize:13,color:C.text,fontWeight:600 }}>Dismiss all?</span>
-                    <button onClick={function(){ setAlertDismissed(true); setConfirmDismissAll(false); }}
-                      style={{ padding:"5px 12px",borderRadius:6,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700 }}>Yes</button>
-                    <button onClick={function(){ setConfirmDismissAll(false); }}
-                      style={{ padding:"5px 12px",borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.text,cursor:"pointer",fontSize:13,fontWeight:700 }}>No</button>
-                  </div>
-                ) : (
+                <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,margin:0 }}>⚠️ Action Required</p>
+                {!confirmDismissAll && (
                   <button onClick={function(){ setConfirmDismissAll(true); }} title="Dismiss alerts"
-                    style={{ width:26,height:26,borderRadius:8,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:15,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>&#x2715;</button>
+                    style={{ width:26,height:26,borderRadius:8,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:15,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0 }}>&#x2715;</button>
                 )}
               </div>
+              {confirmDismissAll && (
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"center",gap:10,marginBottom:12,padding:"10px",background:C.bg,borderRadius:10,border:"1px solid "+C.border }}>
+                  <span style={{ fontSize:15,color:C.text,fontWeight:700 }}>Dismiss all alerts?</span>
+                  <button onClick={function(){ setAlertDismissed(true); setConfirmDismissAll(false); }}
+                    style={{ padding:"7px 18px",borderRadius:6,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:15,fontWeight:700 }}>Yes</button>
+                  <button onClick={function(){ setConfirmDismissAll(false); }}
+                    style={{ padding:"7px 18px",borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.text,cursor:"pointer",fontSize:15,fontWeight:700 }}>No</button>
+                </div>
+              )}
               {(function(){
                 // Build per-dog alert map
                 var dogAlertMap = {};
