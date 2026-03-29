@@ -3031,6 +3031,8 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
   var docs = dog.documents || [];
   var [uploading, setUploading] = useState(false);
+  var [uploadProgress, setUploadProgress] = useState(0);
+  var uploadCancelRef = React.useRef(false);
   var [previewDoc, setPreviewDoc] = useState(null);
   var [zoomLevel, setZoomLevel] = useState(100);
   var [searchQuery, setSearchQuery] = useState("");
@@ -3156,19 +3158,40 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     
     console.log("Starting file upload...");
     setUploading(true);
+    setUploadProgress(0);
+    uploadCancelRef.current = false;
     var reader = new FileReader();
+    reader.onprogress = function(ev) {
+      if (ev.lengthComputable) {
+        setUploadProgress(Math.round((ev.loaded / ev.total) * 80));
+      }
+    };
     reader.onload = function(ev) {
-      var newDoc = {
-        id: String(Date.now()),
-        name: file.name,
-        type: file.type,
-        data: ev.target.result,
-        uploadedAt: new Date().toISOString(),
-        size: file.size
-      };
-      onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+      if (uploadCancelRef.current) {
+        setUploading(false);
+        setUploadProgress(0);
+        return;
+      }
+      setUploadProgress(90);
+      setTimeout(function() {
+        if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return; }
+        var newDoc = {
+          id: String(Date.now()),
+          name: file.name,
+          type: file.type,
+          data: ev.target.result,
+          uploadedAt: new Date().toISOString(),
+          size: file.size
+        };
+        onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+        setUploading(false);
+        setUploadProgress(0);
+        console.log("File uploaded successfully");
+      }, 100);
+    };
+    reader.onerror = function() {
       setUploading(false);
-      console.log("File uploaded successfully");
+      setUploadProgress(0);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
@@ -3258,21 +3281,38 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         </div>
         
         <div style={{ display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:16 }}>
-          <label style={{ display:"inline-flex",alignItems:"center",gap:10,background:C.accent,color:"#fff",padding:"14px 28px",borderRadius:12,fontSize:15,fontWeight:700,cursor:"pointer",transition:"all .2s",border:"2px solid "+C.accent }}
-            onMouseEnter={function(e){ e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px "+C.accentGlow; }}
-            onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
-            <span style={{ fontSize:20 }}>📤</span>
-            {uploading ? "Uploading..." : "Choose File"}
-            <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
-          </label>
-          <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-            <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"8px 12px" }}>
-              <span style={{ fontSize:13,color:C.accent,fontWeight:600 }}>MAX PER FILE: 3MB</span>
+          {uploading ? (
+            <div style={{ flex:1,minWidth:200 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
+                <span style={{ fontSize:14,fontWeight:700,color:C.accent }}>Uploading... {uploadProgress}%</span>
+                <button onClick={function(){ uploadCancelRef.current = true; setUploading(false); setUploadProgress(0); }}
+                  style={{ background:C.red,border:"none",color:"#fff",borderRadius:8,padding:"5px 12px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                  Cancel
+                </button>
+              </div>
+              <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden" }}>
+                <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:uploadProgress+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
+              </div>
             </div>
-            <div style={{ background:C.blueFaint,border:"1px solid "+C.blue,borderRadius:8,padding:"8px 12px" }}>
-              <span style={{ fontSize:13,color:C.blue,fontWeight:600 }}>{docs.length} {docs.length === 1 ? "File" : "Files"}</span>
+          ) : (
+            <label style={{ display:"inline-flex",alignItems:"center",gap:10,background:C.accent,color:"#fff",padding:"14px 28px",borderRadius:12,fontSize:15,fontWeight:700,cursor:"pointer",transition:"all .2s",border:"2px solid "+C.accent }}
+              onMouseEnter={function(e){ e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px "+C.accentGlow; }}
+              onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
+              <span style={{ fontSize:20 }}>📤</span>
+              Choose File
+              <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
+            </label>
+          )}
+          {!uploading && (
+            <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+              <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"8px 12px" }}>
+                <span style={{ fontSize:13,color:C.accent,fontWeight:600 }}>MAX PER FILE: 3MB</span>
+              </div>
+              <div style={{ background:C.blueFaint,border:"1px solid "+C.blue,borderRadius:8,padding:"8px 12px" }}>
+                <span style={{ fontSize:13,color:C.blue,fontWeight:600 }}>{docs.length} {docs.length === 1 ? "File" : "Files"}</span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Storage Usage Bar */}
