@@ -5433,6 +5433,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
   var medEnd = dogs.filter(function(d){ return (d.medications||[]).some(function(m){ return m.active&&m.endDate&&isDueSoon(m.endDate,3); }); });
   var total = needsFeed.length+needsOut.length+heatAlert.length+ovVaxDogs.length+upAppts.length+medEnd.length;
   var [alertDismissed, setAlertDismissed] = useState(false);
+  var [confirmDismissAll, setConfirmDismissAll] = useState(false);
   var [showAllAlerts, setShowAllAlerts] = useState(false);
   var [dismissedAlerts, setDismissedAlerts] = useState({});
   var [dogSearch, setDogSearch] = useState("");
@@ -5620,7 +5621,18 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                 <div style={{ display:"flex",alignItems:"center",gap:10 }}>
                   <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:C.accent,margin:0 }}>⚠️ Action Required</p>
                 </div>
-                <button className="btnI" onClick={function(){ setAlertDismissed(true); }} title="Dismiss alerts">&#x2715;</button>
+                {confirmDismissAll ? (
+                  <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                    <span style={{ fontSize:13,color:C.text,fontWeight:600 }}>Dismiss all?</span>
+                    <button onClick={function(){ setAlertDismissed(true); setConfirmDismissAll(false); }}
+                      style={{ padding:"5px 12px",borderRadius:6,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700 }}>Yes</button>
+                    <button onClick={function(){ setConfirmDismissAll(false); }}
+                      style={{ padding:"5px 12px",borderRadius:6,border:"1px solid "+C.border,background:"transparent",color:C.text,cursor:"pointer",fontSize:13,fontWeight:700 }}>No</button>
+                  </div>
+                ) : (
+                  <button onClick={function(){ setConfirmDismissAll(true); }} title="Dismiss alerts"
+                    style={{ width:26,height:26,borderRadius:8,border:"none",background:C.red,color:"#fff",cursor:"pointer",fontSize:15,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center" }}>&#x2715;</button>
+                )}
               </div>
               {(function(){
                 // Build per-dog alert map
