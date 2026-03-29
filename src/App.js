@@ -5338,7 +5338,7 @@ function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnT
             {dog.photo ? <img src={dog.photo} alt={dog.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : dog.emoji}
           </div>
           <span style={{ fontWeight:800,fontSize:15,color:C.text }}>{dog.name}</span>
-          <span style={{ background:C.accent,color:"#fff",fontSize:11,fontWeight:700,padding:"2px 7px",borderRadius:99 }}>{alerts.length}</span>
+          <span style={{ background:C.accent,color:"#fff",fontSize:13,fontWeight:700,padding:"3px 9px",borderRadius:99 }}>{alerts.length}</span>
         </div>
         <div style={{ display:"flex",alignItems:"center",gap:8 }}>
           <span style={{ display:"inline-flex",alignItems:"center",justifyContent:"center",transition:"transform .2s",transform:open?"rotate(180deg)":"rotate(0deg)" }}>
