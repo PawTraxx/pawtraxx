@@ -5729,32 +5729,34 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                         
                         <div style={{ display:"grid",gap:10 }}>
                           {docs.map(function(doc){
-                            function getFileIcon(type, name) {
-                              if (type.includes("pdf")) return "📄";
-                              if (type.includes("image")) return "🖼️";
-                              if (type.includes("word") || type.includes("document") || name.endsWith(".doc") || name.endsWith(".docx")) return "📝";
-                              if (type.includes("excel") || type.includes("sheet") || name.endsWith(".xls") || name.endsWith(".xlsx")) return "📊";
-                              if (type.includes("text") || name.endsWith(".txt")) return "📃";
-                              return "📎";
-                            }
-                            
+                            var isImage = doc.type && doc.type.startsWith("image/");
+                            var isPdf = doc.type && doc.type.includes("pdf");
                             function formatFileSize(bytes) {
+                              if (!bytes) return "";
                               if (bytes < 1024) return bytes + " B";
                               if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
                               return (bytes / (1024 * 1024)).toFixed(1) + " MB";
                             }
+                            var dateStr = doc.addedAt || doc.uploadedAt;
+                            var displayDate = dateStr ? new Date(dateStr).toLocaleDateString() : "";
                             
                             return (
-                              <div key={doc.id} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+C.border,borderRadius:10,padding:12 }}>
-                                <div style={{ fontSize:28,flexShrink:0 }}>{getFileIcon(doc.type, doc.name)}</div>
-                                <div style={{ flex:1,minWidth:0,overflow:"hidden" }}>
-                                  <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",wordBreak:"break-all" }}>{doc.name}</p>
-                                  <p style={{ fontSize:12,color:C.muted,whiteSpace:"nowrap" }}>{formatFileSize(doc.size)} · {timeAgo(doc.uploadedAt)}</p>
+                              <div key={doc.id} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:12 }}>
+                                {isImage && doc.url ? (
+                                  <img src={doc.url} alt={doc.name} style={{ width:52,height:52,borderRadius:8,objectFit:"cover",flexShrink:0 }} />
+                                ) : (
+                                  <div style={{ width:52,height:52,borderRadius:8,background:C.accentFaint,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0 }}>
+                                    {isPdf ? "📄" : "📎"}
+                                  </div>
+                                )}
+                                <div style={{ flex:1,minWidth:0 }}>
+                                  <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
+                                  <p style={{ fontSize:12,color:C.muted }}>{formatFileSize(doc.size)}{displayDate ? " · " + displayDate : ""}</p>
                                 </div>
                                 <div style={{ display:"flex",gap:8,flexShrink:0 }}>
-                                  <a href={doc.url || doc.data} download={doc.name} style={{ textDecoration:"none" }}>
-                                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
-                                      Download
+                                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+                                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                                      Open
                                     </button>
                                   </a>
                                   <button type="button" onClick={function(){
@@ -5767,7 +5769,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                                         setConfirmDialog({ show: false, title: "", message: "", onConfirm: null });
                                       }
                                     });
-                                  }} style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:600,cursor:"pointer",whiteSpace:"nowrap" }}>
+                                  }} style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
                                     Delete
                                   </button>
                                 </div>
