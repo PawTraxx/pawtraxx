@@ -3222,6 +3222,22 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         uploadedAt: new Date().toISOString(),
         size: file.size
       };
+      // Write directly to localStorage to avoid stale closure issues
+      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+      var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      var email = session.email;
+      if (email && allUsers[email]) {
+        var userDogs = allUsers[email].dogs || [];
+        var updatedDogs = userDogs.map(function(d) {
+          if (d.id === dog.id) {
+            return Object.assign({}, d, { documents: (d.documents || []).concat([newDoc]) });
+          }
+          return d;
+        });
+        allUsers[email].dogs = updatedDogs;
+        localStorage.setItem("pt_users", JSON.stringify(allUsers));
+      }
+      // Also call onUpdate to refresh UI
       onUpdate(Object.assign({}, dog, { documents: (dog.documents || []).concat([newDoc]) }));
       setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
     })
