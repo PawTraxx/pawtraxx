@@ -3208,7 +3208,14 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         uploadedAt: new Date().toISOString(),
         size: file.size
       };
-      onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+      // Re-read dog from localStorage to avoid stale closure
+      var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+      var currentUser = allUsers[session.email];
+      var currentDogs = currentUser ? (currentUser.dogs || []) : [];
+      var currentDog = currentDogs.find(function(d){ return d.id === dog.id; });
+      var currentDocs = currentDog ? (currentDog.documents || []) : [];
+      onUpdate(Object.assign({}, dog, { documents: currentDocs.concat([newDoc]) }));
       setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
     })
     .catch(function(err) {
