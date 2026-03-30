@@ -3065,11 +3065,13 @@ function WeightTab({ dog, onUpdate, earnTP, setCooldownAlert }) {
 // documents / file uploads
 function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
+  var isMobile = useIsMobile();
   var docs = dog.documents || [];
   var [uploading, setUploading] = useState(false);
   var [uploadProgress, setUploadProgress] = useState(0);
   var uploadCancelRef = useRef(false);
-  var [previewDoc, setPreviewDoc] = useState(null);
+  var photoInputRef = useRef(null);
+  var fileInputRef = useRef(null);
   var [zoomLevel, setZoomLevel] = useState(100);
   var [searchQuery, setSearchQuery] = useState("");
   var [sortBy, setSortBy] = useState("date"); // "date" | "name" | "type" | "size"
@@ -3208,14 +3210,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         uploadedAt: new Date().toISOString(),
         size: file.size
       };
-      // Re-read dog from localStorage to avoid stale closure
-      var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
-      var currentUser = allUsers[session.email];
-      var currentDogs = currentUser ? (currentUser.dogs || []) : [];
-      var currentDog = currentDogs.find(function(d){ return d.id === dog.id; });
-      var currentDocs = currentDog ? (currentDog.documents || []) : [];
-      onUpdate(Object.assign({}, dog, { documents: currentDocs.concat([newDoc]) }));
+      onUpdate(Object.assign({}, dog, { documents: (dog.documents || []).concat([newDoc]) }));
       setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
     })
     .catch(function(err) {
@@ -3333,6 +3328,21 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
               <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden" }}>
                 <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:uploadProgress+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
               </div>
+            </div>
+          ) : isMobile ? (
+            <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
+              <button onClick={function(){ photoInputRef.current && photoInputRef.current.click(); }}
+                disabled={uploading}
+                style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"none" }}>
+                <span style={{ fontSize:18 }}>🖼️</span>Photo Library
+              </button>
+              <button onClick={function(){ fileInputRef.current && fileInputRef.current.click(); }}
+                disabled={uploading}
+                style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
+                <span style={{ fontSize:18 }}>📁</span>Files / PDF
+              </button>
+              <input ref={photoInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display:"none" }} />
+              <input ref={fileInputRef} type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ display:"none" }} />
             </div>
           ) : (
             <label style={{ display:"inline-flex",alignItems:"center",gap:10,background:C.accent,color:"#fff",padding:"14px 28px",borderRadius:12,fontSize:15,fontWeight:700,cursor:"pointer",transition:"all .2s",border:"2px solid "+C.accent }}
@@ -7151,11 +7161,13 @@ export default function PawTraks() {
   }
   function addDog(dog) { if(dogs.length>=100){alert("Max 100 dogs.");return;} persist(dogs.concat([dog])); setShowAdd(false); setActiveDog(dog); earnTP(TP_VALUES.add_dog, "Added a new dog: "+dog.name); }
   var updateDog = useCallback(function(upd) {
-    var newList = dogs.map(function(d){ return d.id===upd.id?upd:d; });
+    // Read fresh from localStorage to avoid stale closure
+    var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    var freshDogs = (all[user.email] && all[user.email].dogs) || dogs;
+    var newList = freshDogs.map(function(d){ return d.id===upd.id?upd:d; });
     persist(newList);
-    // Keep activeDog reference fresh if it's the same dog being updated
     setActiveDog(function(cur){ return cur && cur.id===upd.id ? upd : cur; });
-  }, [dogs, persist]);
+  }, [dogs, persist, user]);
   function deleteDog(id) {
     var newList = dogs.filter(function(d){ return d.id!==id; });
     persist(newList);
