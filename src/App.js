@@ -3081,6 +3081,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var uploadCancelRef = useRef(false);
   var photoInputRef = useRef(null);
   var fileInputRef = useRef(null);
+  var [previewDoc, setPreviewDoc] = useState(null);
   var [zoomLevel, setZoomLevel] = useState(100);
   var [searchQuery, setSearchQuery] = useState("");
   var [sortBy, setSortBy] = useState("date"); // "date" | "name" | "type" | "size"
