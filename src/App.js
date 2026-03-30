@@ -3173,6 +3173,9 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     }, 400);
 
     var controller = new AbortController();
+    var timeoutId = setTimeout(function() {
+      controller.abort();
+    }, 60000); // 60 second timeout
 
     fetch(uploadUrl, {
       method: "POST",
@@ -3182,6 +3185,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     })
     .then(function(res) {
       clearInterval(progressInterval);
+      clearTimeout(timeoutId);
       if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return Promise.resolve(); }
       if (!res.ok) {
         return res.json().then(function(data) {
@@ -3206,8 +3210,12 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     })
     .catch(function(err) {
       clearInterval(progressInterval);
-      if (err.name === "AbortError") { setUploading(false); setUploadProgress(0); return; }
-      setAlertDialog({ show:true, title:"Upload Failed", message:err.message || "Network error. Please try again." });
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setAlertDialog({ show:true, title:"Upload Timed Out", message:"The upload took too long. Please try a smaller file or check your connection." });
+      } else {
+        setAlertDialog({ show:true, title:"Upload Failed", message:err.message || "Unknown error. Please try again." });
+      }
       setUploading(false); setUploadProgress(0);
     });
 
