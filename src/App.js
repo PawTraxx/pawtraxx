@@ -3187,8 +3187,10 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
       clearInterval(progressInterval);
       clearTimeout(timeoutId);
       if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return Promise.resolve(); }
+      console.log("Cloudinary response status:", res.status);
       if (!res.ok) {
         return res.json().then(function(data) {
+          console.log("Cloudinary error:", data);
           throw new Error(data.error && data.error.message ? data.error.message : "Status " + res.status);
         });
       }
@@ -3196,6 +3198,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     })
     .then(function(data) {
       if (!data || uploadCancelRef.current) return;
+      console.log("Cloudinary success:", data.secure_url);
       setUploadProgress(100);
       var newDoc = {
         id: String(Date.now()),
