@@ -11,7 +11,7 @@ const BREEDS = [
   "Mixed Breed",
   "Affenpinscher","Afghan Hound","Airedale Terrier","Akita","Alaskan Malamute",
   "American Eskimo Dog","American Foxhound","American Hairless Terrier",
-  "American Staffordshire Terrier","American Water Spaniel","Anatolian Shepherd",
+  "American Bulldog","American Staffordshire Terrier","American Water Spaniel","Anatolian Shepherd",
   "Australian Cattle Dog","Australian Shepherd","Basenji","Basset Hound","Beagle",
   "Bedlington Terrier","Belgian Laekenois","Belgian Malinois","Belgian Sheepdog",
   "Belgian Tervuren","Bernese Mountain Dog","Bichon Frise","Biewer Terrier",
