@@ -1644,9 +1644,12 @@ function SittingDog({ color }) {
 // google sign in
 function GoogleAuthModal({ onClose, onLogin }) {
   var C = useTheme();
-  var [step, setStep] = useState("pick"); // "pick" | "enter" | "loading"
+  var [step, setStep] = useState("pick"); // "pick" | "enter" | "invite" | "loading"
   var [emailInput, setEmailInput] = useState("");
   var [err, setErr] = useState("");
+  var [pendingEmail, setPendingEmail] = useState("");
+  var [pendingName, setPendingName] = useState("");
+  var [inviteInput, setInviteInput] = useState("");
 
   // Saved Google accounts (simulate previously signed-in accounts)
   var savedRaw = localStorage.getItem("pt_google_accounts");
@@ -1662,51 +1665,66 @@ function GoogleAuthModal({ onClose, onLogin }) {
   }
 
   function signInWithGoogle(email, name) {
+    var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    var existingUser = users[email];
+    if (existingUser) {
+      // Existing user — no invite code needed
+      setStep("loading");
+      setTimeout(function() {
+        var gAccounts = JSON.parse(localStorage.getItem("pt_google_accounts") || "[]");
+        if (!gAccounts.find(function(a){ return a.email === email; })) {
+          gAccounts.unshift({ email: email, name: existingUser.name });
+          localStorage.setItem("pt_google_accounts", JSON.stringify(gAccounts.slice(0,5)));
+        }
+        onLogin(existingUser);
+      }, 1000);
+    } else {
+      // New user — require invite code
+      setPendingEmail(email);
+      setPendingName(name || email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }));
+      setStep("invite");
+    }
+  }
+
+  function completeGoogleSignup() {
+    if (!inviteInput || inviteInput.trim() !== INVITE_CODE) {
+      setErr("Invalid invite code. Please check and try again."); return;
+    }
     setStep("loading");
     setTimeout(function() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      var existingUser = users[email];
-      var user;
-      if (existingUser) {
-        user = existingUser;
-      } else {
-        // Create new account via Google
-        user = {
-          name: name || email.split("@")[0].replace(/[._]/g," ").replace(/\b\w/g, function(c){ return c.toUpperCase(); }),
-          email: email,
-          googleAuth: true,
-          dogs: [],
-          createdAt: new Date().toISOString()
-        };
-        users[email] = user;
-        localStorage.setItem("pt_users", JSON.stringify(users));
-        // Send welcome email
-        sendSimulatedEmail(
-          email,
-          "Welcome to PawTraks! 🐾",
-          "Hi "+user.name+",\n\nYour PawTraks account has been created successfully via Google.\n\nEmail: "+email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
-        );
-        // Notify admin of new Google account registration
-        var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
-        notifications.push({
-          id: String(Date.now()),
-          type: "account_created",
-          timestamp: new Date().toISOString(),
-          userEmail: email,
-          userName: user.name,
-          authMethod: "Google",
-          message: "New account created via Google: " + user.name + " (" + email + ")"
-        });
-        localStorage.setItem("pt_admin_notifications", JSON.stringify(notifications));
-      }
-      // Save to google accounts list
+      var user = {
+        name: pendingName,
+        email: pendingEmail,
+        googleAuth: true,
+        dogs: [],
+        createdAt: new Date().toISOString()
+      };
+      users[pendingEmail] = user;
+      localStorage.setItem("pt_users", JSON.stringify(users));
+      sendSimulatedEmail(
+        pendingEmail,
+        "Welcome to PawTraks! 🐾",
+        "Hi "+user.name+",\n\nYour PawTraks account has been created successfully via Google.\n\nEmail: "+pendingEmail+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
+      );
+      var notifications = JSON.parse(localStorage.getItem("pt_admin_notifications") || "[]");
+      notifications.push({
+        id: String(Date.now()),
+        type: "account_created",
+        timestamp: new Date().toISOString(),
+        userEmail: pendingEmail,
+        userName: user.name,
+        authMethod: "Google",
+        message: "New account created via Google: " + user.name + " (" + pendingEmail + ")"
+      });
+      localStorage.setItem("pt_admin_notifications", JSON.stringify(notifications));
       var gAccounts = JSON.parse(localStorage.getItem("pt_google_accounts") || "[]");
-      if (!gAccounts.find(function(a){ return a.email === email; })) {
-        gAccounts.unshift({ email: email, name: user.name });
+      if (!gAccounts.find(function(a){ return a.email === pendingEmail; })) {
+        gAccounts.unshift({ email: pendingEmail, name: user.name });
         localStorage.setItem("pt_google_accounts", JSON.stringify(gAccounts.slice(0,5)));
       }
       onLogin(user);
-    }, 1600);
+    }, 1000);
   }
 
   function handleEmailContinue() {
@@ -1739,6 +1757,24 @@ function GoogleAuthModal({ onClose, onLogin }) {
               <div style={{ width:44,height:44,border:"4px solid #e8eaed",borderTopColor:"#4285F4",borderRadius:"50%",margin:"0 auto 18px",animation:"spin 0.8s linear infinite" }} />
               <p style={{ color:"#202124",fontSize:16,fontWeight:500 }}>Signing you in…</p>
             </div>
+          ) : step === "invite" ? (
+            <>
+              <p style={{ color:"#202124",fontSize:22,fontWeight:400,marginBottom:8 }}>One more step</p>
+              <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>PawTraks is invite only. Enter your invite code to continue.</p>
+              <input
+                autoFocus
+                placeholder="Invite code"
+                value={inviteInput}
+                onChange={function(e){ setInviteInput(e.target.value); setErr(""); }}
+                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
+                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:8 }}
+              />
+              {err && <p style={{ color:"#d93025",fontSize:13,marginBottom:8 }}>{err}</p>}
+              <div style={{ display:"flex",justifyContent:"flex-end",gap:8,marginTop:8 }}>
+                <button onClick={onClose} style={{ background:"none",border:"none",color:"#1a73e8",fontSize:14,fontWeight:500,cursor:"pointer",padding:"10px 16px",borderRadius:4 }}>Cancel</button>
+                <button onClick={completeGoogleSignup} style={{ background:"#1a73e8",border:"none",color:"#fff",fontSize:14,fontWeight:500,cursor:"pointer",padding:"10px 24px",borderRadius:4 }}>Continue</button>
+              </div>
+            </>
           ) : step === "enter" ? (
             <>
               <p style={{ color:"#202124",fontSize:24,fontWeight:400,marginBottom:8,letterSpacing:"-0.5px" }}>Sign in</p>
@@ -3124,50 +3160,58 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     setUploadProgress(0);
     uploadCancelRef.current = false;
 
-    var formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "PawTraks_uploads");
-
     var resourceType = file.type.includes("pdf") ? "raw" : "image";
     var uploadUrl = "https://api.cloudinary.com/v1_1/dos1fywbj/" + resourceType + "/upload";
 
-    // Simulate progress since fetch doesn't support upload progress
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "PawTraks_uploads");
+    formData.append("folder", "pawtraks");
+
     var progressInterval = setInterval(function() {
-      setUploadProgress(function(p) { return p < 85 ? p + 5 : p; });
-    }, 300);
+      setUploadProgress(function(p) { return p < 85 ? p + 3 : p; });
+    }, 400);
+
+    var controller = new AbortController();
 
     fetch(uploadUrl, {
       method: "POST",
-      body: formData
+      body: formData,
+      mode: "cors",
+      signal: controller.signal
     })
     .then(function(res) {
       clearInterval(progressInterval);
-      if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return; }
-      return res.json().then(function(data) {
-        if (res.ok && data.secure_url) {
-          setUploadProgress(100);
-          var newDoc = {
-            id: String(Date.now()),
-            name: file.name,
-            type: file.type,
-            url: data.secure_url,
-            uploadedAt: new Date().toISOString(),
-            size: file.size
-          };
-          onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
-          setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
-        } else {
-          var msg = data.error && data.error.message ? data.error.message : "Upload failed. Please try again.";
-          setAlertDialog({ show:true, title:"Upload Failed", message:msg });
-          setUploading(false); setUploadProgress(0);
-        }
-      });
+      if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return Promise.resolve(); }
+      if (!res.ok) {
+        return res.json().then(function(data) {
+          throw new Error(data.error && data.error.message ? data.error.message : "Status " + res.status);
+        });
+      }
+      return res.json();
+    })
+    .then(function(data) {
+      if (!data || uploadCancelRef.current) return;
+      setUploadProgress(100);
+      var newDoc = {
+        id: String(Date.now()),
+        name: file.name,
+        type: file.type,
+        url: data.secure_url,
+        uploadedAt: new Date().toISOString(),
+        size: file.size
+      };
+      onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+      setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
     })
     .catch(function(err) {
       clearInterval(progressInterval);
-      setAlertDialog({ show:true, title:"Upload Failed", message:"Network error: " + err.message });
+      if (err.name === "AbortError") { setUploading(false); setUploadProgress(0); return; }
+      setAlertDialog({ show:true, title:"Upload Failed", message:err.message || "Network error. Please try again." });
       setUploading(false); setUploadProgress(0);
     });
+
+    uploadCancelRef.current = { abort: function() { controller.abort(); } };
     e.target.value = "";
   }
 
@@ -3259,7 +3303,11 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
             <div style={{ flex:1,minWidth:200 }}>
               <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
                 <span style={{ fontSize:14,fontWeight:700,color:C.accent }}>Uploading... {uploadProgress}%</span>
-                <button onClick={function(){ uploadCancelRef.current = true; setUploading(false); setUploadProgress(0); }}
+                <button onClick={function(){ 
+                    if (uploadCancelRef.current && uploadCancelRef.current.abort) uploadCancelRef.current.abort();
+                    uploadCancelRef.current = false;
+                    setUploading(false); setUploadProgress(0); 
+                  }}
                   style={{ background:C.red,border:"none",color:"#fff",borderRadius:8,padding:"5px 12px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
                   Cancel
                 </button>
