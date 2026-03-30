@@ -3065,7 +3065,6 @@ function WeightTab({ dog, onUpdate, earnTP, setCooldownAlert }) {
 // documents / file uploads
 function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
-  var isMobile = useIsMobile();
   var docs = (dog.documents || []).map(function(d) {
     return {
       id: d.id || String(Date.now()),
@@ -3346,29 +3345,21 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
                 <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:uploadProgress+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
               </div>
             </div>
-          ) : isMobile ? (
+          ) : (
             <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
               <button onClick={function(){ photoInputRef.current && photoInputRef.current.click(); }}
                 disabled={uploading}
                 style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"none" }}>
-                <span style={{ fontSize:18 }}>🖼️</span>Photo Library
+                <span style={{ fontSize:18 }}>🖼️</span>Photo / Image
               </button>
               <button onClick={function(){ fileInputRef.current && fileInputRef.current.click(); }}
                 disabled={uploading}
                 style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
-                <span style={{ fontSize:18 }}>📁</span>Files / PDF
+                <span style={{ fontSize:18 }}>📁</span>PDF / File
               </button>
               <input ref={photoInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display:"none" }} />
               <input ref={fileInputRef} type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ display:"none" }} />
             </div>
-          ) : (
-            <label style={{ display:"inline-flex",alignItems:"center",gap:10,background:C.accent,color:"#fff",padding:"14px 28px",borderRadius:12,fontSize:15,fontWeight:700,cursor:"pointer",transition:"all .2s",border:"2px solid "+C.accent }}
-              onMouseEnter={function(e){ e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 8px 24px "+C.accentGlow; }}
-              onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}>
-              <span style={{ fontSize:20 }}>📤</span>
-              Choose File
-              <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
-            </label>
           )}
           {!uploading && (
             <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
