@@ -3080,7 +3080,16 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     var isImage = file.type.startsWith("image/");
     var isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
     if (!isImage && !isPdf) { setAlertMsg("Only photos and PDF files are allowed."); return; }
-    if (file.size > 10 * 1024 * 1024) { setAlertMsg("File must be under 10MB."); return; }
+    if (file.size > 25 * 1024 * 1024) { setAlertMsg("File must be under 25MB."); return; }
+
+    // Check total storage limit (30MB per dog)
+    var usedStorage = docs.reduce(function(total, d) { return total + (d.size || 0); }, 0);
+    if (usedStorage + file.size > 30 * 1024 * 1024) {
+      var usedMB = (usedStorage / (1024 * 1024)).toFixed(1);
+      var remainingMB = ((30 * 1024 * 1024 - usedStorage) / (1024 * 1024)).toFixed(1);
+      setAlertMsg("Storage limit reached. You've used " + usedMB + "MB of your 30MB limit for " + dog.name + ". " + remainingMB + "MB remaining.");
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -3179,6 +3188,27 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
       <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20,marginBottom:20 }}>
         <h3 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:800,marginBottom:4 }}>📁 Documents</h3>
         <p style={{ color:C.muted,fontSize:14,marginBottom:16 }}>Upload photos or PDF files for {dog.name}.</p>
+
+        {/* Storage Bar */}
+        {(function(){
+          var MAX = 30 * 1024 * 1024;
+          var used = docs.reduce(function(t, d){ return t + (d.size || 0); }, 0);
+          var pct = Math.min(100, (used / MAX) * 100);
+          var usedMB = (used / (1024 * 1024)).toFixed(1);
+          var color = pct > 90 ? C.red : pct > 70 ? C.yellow : C.accent;
+          return (
+            <div style={{ marginBottom:16,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:12 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",marginBottom:6 }}>
+                <span style={{ fontSize:13,fontWeight:700,color:C.text }}>Storage for {dog.name}</span>
+                <span style={{ fontSize:13,fontWeight:800,color:color }}>{usedMB} MB / 30 MB</span>
+              </div>
+              <div style={{ background:C.border,borderRadius:999,height:8,overflow:"hidden",marginBottom:4 }}>
+                <div style={{ background:pct > 90 ? C.red : pct > 70 ? C.yellow : "linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:pct+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
+              </div>
+              <span style={{ fontSize:12,color:C.muted }}>{(30 - parseFloat(usedMB)).toFixed(1)} MB remaining</span>
+            </div>
+          );
+        })()}
 
         {uploading ? (
           <div>
