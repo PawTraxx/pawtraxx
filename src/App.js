@@ -3071,6 +3071,8 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var [previewDoc, setPreviewDoc] = useState(null);
   var [confirmId, setConfirmId] = useState(null);
   var [alertMsg, setAlertMsg] = useState("");
+  var [editId, setEditId] = useState(null);
+  var [editName, setEditName] = useState("");
   var cameraRef = useRef(null);
   var photoRef = useRef(null);
   var uploadCancelRef = useRef(false);
@@ -3157,6 +3159,23 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
     var file = e.target.files && e.target.files[0];
     if (file) uploadToCloudinary(file);
     e.target.value = "";
+  }
+
+  function saveEditName(id) {
+    if (!editName.trim()) { setEditId(null); return; }
+    var updated = docs.map(function(d){ return d.id === id ? Object.assign({}, d, { name: editName.trim() }) : d; });
+    var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+    var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    if (session.email && allUsers[session.email]) {
+      var userDogs = allUsers[session.email].dogs || [];
+      allUsers[session.email].dogs = userDogs.map(function(d) {
+        if (d.id === dog.id) return Object.assign({}, d, { documents: updated });
+        return d;
+      });
+      localStorage.setItem("pt_users", JSON.stringify(allUsers));
+    }
+    onUpdate(Object.assign({}, dog, { documents: updated }));
+    setEditId(null);
   }
 
   function deleteDoc(id) {
@@ -3257,7 +3276,27 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
                   </div>
                 )}
                 <div style={{ flex:1,minWidth:0 }}>
-                  <p style={{ fontWeight:700,fontSize:14,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
+                  {editId === doc.id ? (
+                    <div style={{ display:"flex",gap:6,alignItems:"center" }}>
+                      <input
+                        autoFocus
+                        value={editName}
+                        onChange={function(e){ setEditName(e.target.value); }}
+                        onKeyDown={function(e){ if(e.key==="Enter") saveEditName(doc.id); if(e.key==="Escape") setEditId(null); }}
+                        style={{ flex:1,padding:"6px 10px",borderRadius:8,border:"1.5px solid "+C.accent,background:C.bg,color:C.text,fontSize:14,minWidth:0 }}
+                      />
+                      <button onClick={function(){ saveEditName(doc.id); }}
+                        style={{ background:C.accent,border:"none",color:"#fff",borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0 }}>✓</button>
+                      <button onClick={function(){ setEditId(null); }}
+                        style={{ background:C.bg,border:"1.5px solid "+C.border,color:C.text,borderRadius:8,padding:"6px 10px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0 }}>✕</button>
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex",alignItems:"center",gap:6 }}>
+                      <p style={{ fontWeight:700,fontSize:14,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>{doc.name}</p>
+                      <button onClick={function(){ setEditId(doc.id); setEditName(doc.name); }}
+                        style={{ background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,flexShrink:0,padding:2 }}>✏️</button>
+                    </div>
+                  )}
                   <p style={{ fontSize:12,color:C.muted }}>{doc.addedAt ? new Date(doc.addedAt).toLocaleDateString() : ""}</p>
                 </div>
                 <div style={{ display:"flex",gap:8,flexShrink:0 }}>
