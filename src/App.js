@@ -3073,7 +3073,6 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var [alertMsg, setAlertMsg] = useState("");
   var cameraRef = useRef(null);
   var photoRef = useRef(null);
-  var pdfRef = useRef(null);
   var uploadCancelRef = useRef(false);
 
   function uploadToCloudinary(file) {
@@ -3202,13 +3201,8 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
               style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
               🖼️ Photo Library
             </button>
-            <button onClick={function(){ pdfRef.current && pdfRef.current.click(); }}
-              style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
-              📄 PDF / File
-            </button>
             <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display:"none" }} />
             <input ref={photoRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />
-            <input ref={pdfRef} type="file" accept="application/pdf" onChange={handleFile} style={{ display:"none" }} />
           </div>
         )}
       </div>
