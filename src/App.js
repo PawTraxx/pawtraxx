@@ -3082,7 +3082,9 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   var [pdfBlobUrl, setPdfBlobUrl] = useState(null);
 
   function isDocx(doc) {
-    return doc && (doc.type.includes("word") || doc.type.includes("document") || doc.name.endsWith(".docx") || doc.name.endsWith(".doc"));
+    if (!doc || !doc.type) return false;
+    var name = doc.name || "";
+    return doc.type.includes("word") || doc.type.includes("document") || name.endsWith(".docx") || name.endsWith(".doc");
   }
 
   function openPreview(doc) {
@@ -3248,28 +3250,33 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
   }
 
   function getFileIcon(type, name) {
+    var n = name || "";
+    if (!type) return "📎";
     if (type.includes("pdf")) return "📄";
     if (type.includes("image")) return "🖼️";
-    if (type.includes("word") || type.includes("document") || name.endsWith(".doc") || name.endsWith(".docx")) return "📝";
-    if (type.includes("excel") || type.includes("sheet") || name.endsWith(".xls") || name.endsWith(".xlsx")) return "📊";
-    if (type.includes("text") || name.endsWith(".txt")) return "📃";
+    if (type.includes("word") || type.includes("document") || n.endsWith(".doc") || n.endsWith(".docx")) return "📝";
+    if (type.includes("excel") || type.includes("sheet") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "📊";
+    if (type.includes("text") || n.endsWith(".txt")) return "📃";
     return "📎";
   }
   
   function getFileCategory(type, name) {
+    var n = name || "";
+    if (!type) return "Other";
     if (type.includes("pdf")) return "PDF";
     if (type.includes("image")) return "Image";
-    if (type.includes("word") || type.includes("document") || name.endsWith(".doc") || name.endsWith(".docx")) return "Document";
-    if (type.includes("excel") || type.includes("sheet") || name.endsWith(".xls") || name.endsWith(".xlsx")) return "Spreadsheet";
-    if (type.includes("text") || name.endsWith(".txt")) return "Text";
+    if (type.includes("word") || type.includes("document") || n.endsWith(".doc") || n.endsWith(".docx")) return "Document";
+    if (type.includes("excel") || type.includes("sheet") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "Spreadsheet";
+    if (type.includes("text") || n.endsWith(".txt")) return "Text";
     return "Other";
   }
 
   // Filter and sort documents
   var filteredDocs = docs.filter(function(doc) {
+    if (!doc || !doc.type) return false;
     if (!searchQuery) return true;
     var query = searchQuery.toLowerCase();
-    return doc.name.toLowerCase().includes(query) || 
+    return (doc.name || "").toLowerCase().includes(query) || 
            getFileCategory(doc.type, doc.name).toLowerCase().includes(query);
   });
 
