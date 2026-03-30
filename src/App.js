@@ -3066,52 +3066,108 @@ function WeightTab({ dog, onUpdate, earnTP, setCooldownAlert }) {
 function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
   var docs = dog.documents || [];
-  var [showAdd, setShowAdd] = useState(false);
-  var [nameInput, setNameInput] = useState("");
-  var [urlInput, setUrlInput] = useState("");
-  var [typeInput, setTypeInput] = useState("other");
-  var [confirmDialog, setConfirmDialog] = useState({ show: false, id: null });
+  var [uploading, setUploading] = useState(false);
+  var [uploadProgress, setUploadProgress] = useState(0);
+  var [previewDoc, setPreviewDoc] = useState(null);
+  var [confirmId, setConfirmId] = useState(null);
+  var [alertMsg, setAlertMsg] = useState("");
+  var cameraRef = useRef(null);
+  var photoRef = useRef(null);
+  var pdfRef = useRef(null);
+  var uploadCancelRef = useRef(false);
 
-  function addDoc() {
-    if (!nameInput.trim()) { alert("Please enter a name."); return; }
-    if (!urlInput.trim()) { alert("Please enter a link."); return; }
-    var url = urlInput.trim();
-    if (!url.startsWith("http://") && !url.startsWith("https://")) {
-      url = "https://" + url;
-    }
-    var newDoc = {
-      id: String(Date.now()),
-      name: nameInput.trim(),
-      url: url,
-      type: typeInput,
-      addedAt: new Date().toISOString()
-    };
-    onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
-    setNameInput(""); setUrlInput(""); setTypeInput("other"); setShowAdd(false);
+  function uploadToCloudinary(file) {
+    if (!file) return;
+    var isImage = file.type.startsWith("image/");
+    var isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    if (!isImage && !isPdf) { setAlertMsg("Only photos and PDF files are allowed."); return; }
+    if (file.size > 10 * 1024 * 1024) { setAlertMsg("File must be under 10MB."); return; }
+
+    setUploading(true);
+    setUploadProgress(0);
+    uploadCancelRef.current = false;
+
+    var resourceType = isPdf ? "raw" : "image";
+    var uploadUrl = "https://api.cloudinary.com/v1_1/dos1fywbj/" + resourceType + "/upload";
+    var formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "PawTraks_uploads");
+    formData.append("folder", "pawtraks");
+
+    var progressInterval = setInterval(function() {
+      setUploadProgress(function(p) { return p < 85 ? p + 4 : p; });
+    }, 300);
+
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function() { controller.abort(); }, 60000);
+
+    fetch(uploadUrl, { method:"POST", body:formData, mode:"cors", signal:controller.signal })
+    .then(function(res) {
+      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
+      if (!res.ok) return res.json().then(function(d){ throw new Error(d.error && d.error.message ? d.error.message : "Upload failed"); });
+      return res.json();
+    })
+    .then(function(data) {
+      if (!data || uploadCancelRef.current) return;
+      setUploadProgress(100);
+      var newDoc = {
+        id: String(Date.now()),
+        name: file.name,
+        type: file.type,
+        url: data.secure_url,
+        addedAt: new Date().toISOString(),
+        size: file.size
+      };
+      // Write directly to localStorage
+      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+      var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      if (session.email && allUsers[session.email]) {
+        var userDogs = allUsers[session.email].dogs || [];
+        allUsers[session.email].dogs = userDogs.map(function(d) {
+          if (d.id === dog.id) return Object.assign({}, d, { documents: (d.documents || []).concat([newDoc]) });
+          return d;
+        });
+        localStorage.setItem("pt_users", JSON.stringify(allUsers));
+      }
+      onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+      setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
+    })
+    .catch(function(err) {
+      clearInterval(progressInterval);
+      clearTimeout(timeoutId);
+      if (err.name === "AbortError") {
+        setAlertMsg("Upload timed out. Please try again.");
+      } else {
+        setAlertMsg(err.message || "Upload failed. Please try again.");
+      }
+      setUploading(false); setUploadProgress(0);
+    });
+  }
+
+  function handleFile(e) {
+    var file = e.target.files && e.target.files[0];
+    if (file) uploadToCloudinary(file);
+    e.target.value = "";
   }
 
   function deleteDoc(id) {
+    var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
+    var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    if (session.email && allUsers[session.email]) {
+      var userDogs = allUsers[session.email].dogs || [];
+      allUsers[session.email].dogs = userDogs.map(function(d) {
+        if (d.id === dog.id) return Object.assign({}, d, { documents: (d.documents || []).filter(function(doc){ return doc.id !== id; }) });
+        return d;
+      });
+      localStorage.setItem("pt_users", JSON.stringify(allUsers));
+    }
     onUpdate(Object.assign({}, dog, { documents: docs.filter(function(d){ return d.id !== id; }) }));
-    setConfirmDialog({ show: false, id: null });
+    setConfirmId(null);
   }
 
-  function getIcon(type) {
-    if (type === "gdrive") return "🟢";
-    if (type === "icloud") return "☁️";
-    if (type === "dropbox") return "📦";
-    if (type === "photo") return "🖼️";
-    if (type === "pdf") return "📄";
-    return "🔗";
-  }
-
-  function getLabel(type) {
-    if (type === "gdrive") return "Google Drive";
-    if (type === "icloud") return "iCloud";
-    if (type === "dropbox") return "Dropbox";
-    if (type === "photo") return "Photo";
-    if (type === "pdf") return "PDF";
-    return "Link";
-  }
+  function isImage(doc) { return doc.type && doc.type.startsWith("image/"); }
+  function isPdf(doc) { return doc.type && doc.type.includes("pdf"); }
 
   return (
     <div className="fadeIn">
@@ -3120,96 +3176,76 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         <span style={{ fontSize:16 }}>←</span> Back to Overview
       </button>
 
-      {/* Header */}
+      {/* Upload Section */}
       <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20,marginBottom:20 }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+        <h3 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:800,marginBottom:4 }}>📁 Documents</h3>
+        <p style={{ color:C.muted,fontSize:14,marginBottom:16 }}>Upload photos or PDF files for {dog.name}.</p>
+
+        {uploading ? (
           <div>
-            <h3 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:800,marginBottom:4 }}>📁 Documents</h3>
-            <p style={{ color:C.muted,fontSize:14 }}>Add links to documents stored in Google Drive, iCloud, Dropbox, or anywhere online.</p>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
+              <span style={{ fontSize:14,fontWeight:700,color:C.accent }}>Uploading... {uploadProgress}%</span>
+              <button onClick={function(){ uploadCancelRef.current = true; setUploading(false); setUploadProgress(0); }}
+                style={{ background:C.red,border:"none",color:"#fff",borderRadius:8,padding:"5px 12px",fontSize:13,fontWeight:700,cursor:"pointer" }}>Cancel</button>
+            </div>
+            <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden" }}>
+              <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:uploadProgress+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
+            </div>
           </div>
-        </div>
-        <button onClick={function(){ setShowAdd(true); }}
-          style={{ background:C.accent,border:"none",color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8 }}>
-          + Add Document Link
-        </button>
+        ) : (
+          <div style={{ display:"flex",gap:10,flexWrap:"wrap" }}>
+            <button onClick={function(){ cameraRef.current && cameraRef.current.click(); }}
+              style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"none" }}>
+              📷 Camera
+            </button>
+            <button onClick={function(){ photoRef.current && photoRef.current.click(); }}
+              style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
+              🖼️ Photo Library
+            </button>
+            <button onClick={function(){ pdfRef.current && pdfRef.current.click(); }}
+              style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
+              📄 PDF / File
+            </button>
+            <input ref={cameraRef} type="file" accept="image/*" capture="environment" onChange={handleFile} style={{ display:"none" }} />
+            <input ref={photoRef} type="file" accept="image/*" onChange={handleFile} style={{ display:"none" }} />
+            <input ref={pdfRef} type="file" accept="application/pdf" onChange={handleFile} style={{ display:"none" }} />
+          </div>
+        )}
       </div>
 
-      {/* Add Form */}
-      {showAdd && (
-        <div style={{ background:C.card,border:"1.5px solid "+C.accent,borderRadius:16,padding:20,marginBottom:20 }}>
-          <h4 style={{ fontFamily:"Fraunces",fontSize:17,color:C.text,fontWeight:800,marginBottom:16 }}>Add Document Link</h4>
-          <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Document Name</label>
-            <input value={nameInput} onChange={function(e){ setNameInput(e.target.value); }}
-              placeholder="e.g. Vet Records 2025, Vaccination Certificate"
-              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15,boxSizing:"border-box" }} />
-          </div>
-          <div style={{ marginBottom:12 }}>
-            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Link / URL</label>
-            <input value={urlInput} onChange={function(e){ setUrlInput(e.target.value); }}
-              placeholder="Paste Google Drive, iCloud, Dropbox link here"
-              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15,boxSizing:"border-box" }} />
-          </div>
-          <div style={{ marginBottom:16 }}>
-            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Type</label>
-            <select value={typeInput} onChange={function(e){ setTypeInput(e.target.value); }}
-              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15 }}>
-              <option value="gdrive">🟢 Google Drive</option>
-              <option value="icloud">☁️ iCloud</option>
-              <option value="dropbox">📦 Dropbox</option>
-              <option value="photo">🖼️ Photo</option>
-              <option value="pdf">📄 PDF</option>
-              <option value="other">🔗 Other Link</option>
-            </select>
-          </div>
-          <div style={{ display:"flex",gap:10 }}>
-            <button onClick={addDoc}
-              style={{ flex:1,background:C.accent,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
-              Save
-            </button>
-            <button onClick={function(){ setShowAdd(false); setNameInput(""); setUrlInput(""); setTypeInput("other"); }}
-              style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
-              Cancel
-            </button>
-          </div>
-          <p style={{ fontSize:12,color:C.muted,marginTop:12,lineHeight:1.5 }}>
-            💡 <strong>How to get a link:</strong> In Google Drive, right-click a file → Share → Copy link. In iCloud, open the file → Share → Copy Link.
-          </p>
-        </div>
-      )}
-
       {/* Document List */}
-      {docs.length === 0 && !showAdd ? (
+      {docs.length === 0 ? (
         <div style={{ textAlign:"center",padding:48,background:C.card,border:"1.5px solid "+C.border,borderRadius:16 }}>
           <div style={{ fontSize:56,marginBottom:12 }}>📂</div>
           <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:700,color:C.text,marginBottom:8 }}>No Documents Yet</p>
-          <p style={{ color:C.muted,fontSize:14,marginBottom:20 }}>Add links to vet records, vaccination certificates, insurance documents and more.</p>
-          <button onClick={function(){ setShowAdd(true); }}
-            style={{ background:C.accent,border:"none",color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
-            + Add Your First Document
-          </button>
+          <p style={{ color:C.muted,fontSize:14 }}>Upload photos or PDFs using the buttons above.</p>
         </div>
       ) : (
         <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
           {docs.map(function(doc) {
             return (
-              <div key={doc.id} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:16,display:"flex",alignItems:"center",gap:14 }}>
-                <div style={{ fontSize:36,flexShrink:0 }}>{getIcon(doc.type)}</div>
-                <div style={{ flex:1,minWidth:0 }}>
-                  <p style={{ fontWeight:700,fontSize:15,color:C.text,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
-                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-                    <span style={{ fontSize:11,color:C.accent,background:C.accentFaint,padding:"2px 8px",borderRadius:4,fontWeight:600 }}>{getLabel(doc.type)}</span>
-                    <span style={{ fontSize:12,color:C.muted }}>{doc.addedAt ? new Date(doc.addedAt).toLocaleDateString() : ""}</span>
+              <div key={doc.id} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:14,display:"flex",alignItems:"center",gap:12 }}>
+                {isImage(doc) && doc.url ? (
+                  <img src={doc.url} alt={doc.name} style={{ width:56,height:56,borderRadius:8,objectFit:"cover",flexShrink:0 }} />
+                ) : (
+                  <div style={{ width:56,height:56,borderRadius:8,background:C.accentFaint,display:"flex",alignItems:"center",justifyContent:"center",fontSize:28,flexShrink:0 }}>
+                    {isPdf(doc) ? "📄" : "📎"}
                   </div>
+                )}
+                <div style={{ flex:1,minWidth:0 }}>
+                  <p style={{ fontWeight:700,fontSize:14,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
+                  <p style={{ fontSize:12,color:C.muted }}>{doc.addedAt ? new Date(doc.addedAt).toLocaleDateString() : ""}</p>
                 </div>
                 <div style={{ display:"flex",gap:8,flexShrink:0 }}>
-                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
-                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-                      Open
-                    </button>
-                  </a>
-                  <button onClick={function(){ setConfirmDialog({ show: true, id: doc.id }); }}
-                    style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 10px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                  {doc.url && (
+                    <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+                      <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                        Open
+                      </button>
+                    </a>
+                  )}
+                  <button onClick={function(){ setConfirmId(doc.id); }}
+                    style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 10px",fontSize:13,cursor:"pointer" }}>
                     🗑️
                   </button>
                 </div>
@@ -3219,21 +3255,29 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
         </div>
       )}
 
+      {/* Alert */}
+      {alertMsg && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
+          <div style={{ background:C.card,borderRadius:16,padding:24,maxWidth:340,width:"100%",border:"1.5px solid "+C.red }}>
+            <h3 style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.red,marginBottom:8 }}>⚠️ Error</h3>
+            <p style={{ color:C.text,fontSize:14,marginBottom:20 }}>{alertMsg}</p>
+            <button onClick={function(){ setAlertMsg(""); }}
+              style={{ width:"100%",background:C.accent,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>OK</button>
+          </div>
+        </div>
+      )}
+
       {/* Confirm Delete */}
-      {confirmDialog.show && (
+      {confirmId && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
           <div style={{ background:C.card,borderRadius:16,padding:24,maxWidth:340,width:"100%",border:"1.5px solid "+C.border }}>
             <h3 style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:8 }}>Delete Document?</h3>
-            <p style={{ color:C.muted,fontSize:14,marginBottom:20 }}>This will remove the link from PawTraks. The original file will not be deleted.</p>
+            <p style={{ color:C.muted,fontSize:14,marginBottom:20 }}>This cannot be undone.</p>
             <div style={{ display:"flex",gap:10 }}>
-              <button onClick={function(){ deleteDoc(confirmDialog.id); }}
-                style={{ flex:1,background:C.red,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
-                Delete
-              </button>
-              <button onClick={function(){ setConfirmDialog({ show: false, id: null }); }}
-                style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
-                Cancel
-              </button>
+              <button onClick={function(){ deleteDoc(confirmId); }}
+                style={{ flex:1,background:C.red,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>Delete</button>
+              <button onClick={function(){ setConfirmId(null); }}
+                style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>Cancel</button>
             </div>
           </div>
         </div>
