@@ -5701,9 +5701,9 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
             var totalDocs = dogs.reduce(function(sum, d){ return sum + (d.documents||[]).length; }, 0);
             
             return (
-              <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"24px 20px",overflowY:"auto" }}
+              <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto" }}
                 onClick={function(){ setShowPackDocs(false); }}>
-                <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.blue,borderRadius:24,padding:28,maxWidth:720,width:"100%",overscrollBehavior:"contain" }}
+                <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.blue,borderRadius:20,padding:20,maxWidth:720,width:"100%",overscrollBehavior:"contain" }}
                   onClick={function(e){ e.stopPropagation(); }}>
                   <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
                     <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.blue }}>📄 Pack Documents</h2>
@@ -5741,21 +5741,21 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                             var displayDate = dateStr ? new Date(dateStr).toLocaleDateString() : "";
                             
                             return (
-                              <div key={doc.id} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:12 }}>
+                              <div key={doc.id} style={{ display:"flex",alignItems:"center",gap:10,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:10 }}>
                                 {isImage && doc.url ? (
-                                  <img src={doc.url} alt={doc.name} style={{ width:52,height:52,borderRadius:8,objectFit:"cover",flexShrink:0 }} />
+                                  <img src={doc.url} alt={doc.name} style={{ width:44,height:44,borderRadius:8,objectFit:"cover",flexShrink:0 }} />
                                 ) : (
-                                  <div style={{ width:52,height:52,borderRadius:8,background:C.accentFaint,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26,flexShrink:0 }}>
+                                  <div style={{ width:44,height:44,borderRadius:8,background:C.accentFaint,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,flexShrink:0 }}>
                                     {isPdf ? "📄" : "📎"}
                                   </div>
                                 )}
                                 <div style={{ flex:1,minWidth:0 }}>
-                                  <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:3,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
-                                  <p style={{ fontSize:12,color:C.muted }}>{formatFileSize(doc.size)}{displayDate ? " · " + displayDate : ""}</p>
+                                  <p style={{ fontSize:13,fontWeight:700,color:C.text,marginBottom:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
+                                  <p style={{ fontSize:11,color:C.muted }}>{formatFileSize(doc.size)}{displayDate ? " · " + displayDate : ""}</p>
                                 </div>
-                                <div style={{ display:"flex",gap:8,flexShrink:0 }}>
+                                <div style={{ display:"flex",gap:6,flexShrink:0 }}>
                                   <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
-                                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
                                       Open
                                     </button>
                                   </a>
@@ -5769,7 +5769,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
                                         setConfirmDialog({ show: false, title: "", message: "", onConfirm: null });
                                       }
                                     });
-                                  }} style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                                  }} style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
                                     Delete
                                   </button>
                                 </div>
