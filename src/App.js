@@ -3065,540 +3065,184 @@ function WeightTab({ dog, onUpdate, earnTP, setCooldownAlert }) {
 // documents / file uploads
 function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
-  var docs = (dog.documents || []).map(function(d) {
-    return {
-      id: d.id || String(Date.now()),
-      name: d.name || "Unknown file",
-      type: d.type || "application/octet-stream",
-      url: d.url || null,
-      data: d.data || null,
-      uploadedAt: d.uploadedAt || new Date().toISOString(),
-      size: d.size || 0
+  var docs = dog.documents || [];
+  var [showAdd, setShowAdd] = useState(false);
+  var [nameInput, setNameInput] = useState("");
+  var [urlInput, setUrlInput] = useState("");
+  var [typeInput, setTypeInput] = useState("other");
+  var [confirmDialog, setConfirmDialog] = useState({ show: false, id: null });
+
+  function addDoc() {
+    if (!nameInput.trim()) { alert("Please enter a name."); return; }
+    if (!urlInput.trim()) { alert("Please enter a link."); return; }
+    var url = urlInput.trim();
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
+      url = "https://" + url;
+    }
+    var newDoc = {
+      id: String(Date.now()),
+      name: nameInput.trim(),
+      url: url,
+      type: typeInput,
+      addedAt: new Date().toISOString()
     };
-  });
-  var [uploading, setUploading] = useState(false);
-  var [uploadProgress, setUploadProgress] = useState(0);
-  var uploadCancelRef = useRef(false);
-  var photoInputRef = useRef(null);
-  var fileInputRef = useRef(null);
-  var [previewDoc, setPreviewDoc] = useState(null);
-  var [zoomLevel, setZoomLevel] = useState(100);
-  var [searchQuery, setSearchQuery] = useState("");
-  var [sortBy, setSortBy] = useState("date"); // "date" | "name" | "type" | "size"
-  var [alertDialog, setAlertDialog] = useState({ show: false, title: "", message: "" });
-  var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
-  var [docxHtml, setDocxHtml] = useState(null);
-  var [docxLoading, setDocxLoading] = useState(false);
-  var [pdfBlobUrl, setPdfBlobUrl] = useState(null);
-
-  function isDocx(doc) {
-    if (!doc || !doc.type) return false;
-    var name = doc.name || "";
-    return doc.type.includes("word") || doc.type.includes("document") || name.endsWith(".docx") || name.endsWith(".doc");
-  }
-
-  function openPreview(doc) {
-    setPreviewDoc(doc);
-    setZoomLevel(100);
-    setDocxHtml(null);
-    // Use Cloudinary URL directly — works for both images and PDFs
-    setPdfBlobUrl(doc.url || doc.data || null);
-  }
-
-  function handleFileUpload(e) {
-    var file = e.target.files && e.target.files[0];
-    if (!file) return;
-
-    // Only allow images and PDF
-    var isImage = file.type.startsWith("image/");
-    var isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
-    if (!isImage && !isPdf) {
-      setAlertDialog({
-        show: true,
-        title: "File Type Not Allowed",
-        message: "Only image files (PNG, JPG, etc.) and PDF files can be uploaded."
-      });
-      e.target.value = "";
-      return;
-    }
-    
-    console.log("File selected:", file.name, "Length:", file.name.length);
-    
-    // Check total filename length FIRST
-    if (file.name.length > 30) {
-      console.error("FILE NAME TOO LONG - Length:", file.name.length);
-      
-      setAlertDialog({
-        show: true,
-        title: "File Name Too Long!",
-        message: "Your file name: " + file.name + "\n\nLength: " + file.name.length + " characters\nMaximum allowed: 30 characters\n\nPlease rename your file and try again."
-      });
-      
-      e.target.value = "";
-      return;
-    }
-    
-    console.log("Filename length OK");
-    
-    if (file.size > 3 * 1024 * 1024) { 
-      setAlertDialog({
-        show: true,
-        title: "File Too Large!",
-        message: "File size: " + (file.size / (1024 * 1024)).toFixed(1) + " MB\n\nMaximum per file: 3 MB\n\nPlease choose a smaller file."
-      });
-      e.target.value = ""; 
-      return; 
-    }
-    
-    // Check storage limit (20MB per dog)
-    var MAX_STORAGE = 20 * 1024 * 1024;
-    var usedStorage = docs.reduce(function(total, doc) { return total + (doc.size || 0); }, 0);
-    var remainingStorage = MAX_STORAGE - usedStorage;
-    
-    if (file.size > remainingStorage) {
-      var usedMB = (usedStorage / (1024 * 1024)).toFixed(1);
-      var remainingMB = (remainingStorage / (1024 * 1024)).toFixed(1);
-      var fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      
-      setAlertDialog({
-        show: true,
-        title: "Not Enough Storage!",
-        message: "This file is " + fileSizeMB + " MB but you only have " + remainingMB + " MB remaining.\n\nYou've used " + usedMB + " MB of your 20 MB limit for " + dog.name + ".\n\nPlease delete some files or choose a smaller file."
-      });
-      e.target.value = "";
-      return;
-    }
-    
-    console.log("Starting file upload...");
-    setUploading(true);
-    setUploadProgress(0);
-    uploadCancelRef.current = false;
-
-    var resourceType = file.type.includes("pdf") ? "raw" : "image";
-    var uploadUrl = "https://api.cloudinary.com/v1_1/dos1fywbj/" + resourceType + "/upload";
-
-    var formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", "PawTraks_uploads");
-    formData.append("folder", "pawtraks");
-
-    var progressInterval = setInterval(function() {
-      setUploadProgress(function(p) { return p < 85 ? p + 3 : p; });
-    }, 400);
-
-    var controller = new AbortController();
-    var timeoutId = setTimeout(function() {
-      controller.abort();
-    }, 60000); // 60 second timeout
-
-    fetch(uploadUrl, {
-      method: "POST",
-      body: formData,
-      mode: "cors",
-      signal: controller.signal
-    })
-    .then(function(res) {
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
-      if (uploadCancelRef.current) { setUploading(false); setUploadProgress(0); return Promise.resolve(); }
-      console.log("Cloudinary response status:", res.status);
-      if (!res.ok) {
-        return res.json().then(function(data) {
-          console.log("Cloudinary error:", data);
-          throw new Error(data.error && data.error.message ? data.error.message : "Status " + res.status);
-        });
-      }
-      return res.json();
-    })
-    .then(function(data) {
-      if (!data || uploadCancelRef.current) return;
-      console.log("Cloudinary success:", data.secure_url);
-      setUploadProgress(100);
-      var newDoc = {
-        id: String(Date.now()),
-        name: file.name,
-        type: file.type,
-        url: data.secure_url,
-        uploadedAt: new Date().toISOString(),
-        size: file.size
-      };
-      // Write directly to localStorage to avoid stale closure issues
-      var session = JSON.parse(localStorage.getItem("pt_session") || "{}");
-      var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      var email = session.email;
-      if (email && allUsers[email]) {
-        var userDogs = allUsers[email].dogs || [];
-        var updatedDogs = userDogs.map(function(d) {
-          if (d.id === dog.id) {
-            return Object.assign({}, d, { documents: (d.documents || []).concat([newDoc]) });
-          }
-          return d;
-        });
-        allUsers[email].dogs = updatedDogs;
-        localStorage.setItem("pt_users", JSON.stringify(allUsers));
-      }
-      // Also call onUpdate to refresh UI
-      onUpdate(Object.assign({}, dog, { documents: (dog.documents || []).concat([newDoc]) }));
-      setTimeout(function() { setUploading(false); setUploadProgress(0); }, 500);
-    })
-    .catch(function(err) {
-      clearInterval(progressInterval);
-      clearTimeout(timeoutId);
-      if (err.name === "AbortError") {
-        setAlertDialog({ show:true, title:"Upload Timed Out", message:"The upload took too long. Please try a smaller file or check your connection." });
-      } else {
-        setAlertDialog({ show:true, title:"Upload Failed", message:err.message || "Unknown error. Please try again." });
-      }
-      setUploading(false); setUploadProgress(0);
-    });
-
-    uploadCancelRef.current = { abort: function() { controller.abort(); } };
-    e.target.value = "";
+    onUpdate(Object.assign({}, dog, { documents: docs.concat([newDoc]) }));
+    setNameInput(""); setUrlInput(""); setTypeInput("other"); setShowAdd(false);
   }
 
   function deleteDoc(id) {
-    var doc = docs.find(function(d){ return d.id === id; });
-    setConfirmDialog({
-      show: true,
-      title: "Delete Document?",
-      message: "Are you sure you want to delete '" + (doc ? doc.name : "this document") + "'?\n\nThis action cannot be undone.",
-      onConfirm: function() {
-        onUpdate(Object.assign({}, dog, { documents: docs.filter(function(d){ return d.id !== id; }) }));
-        setConfirmDialog({ show: false, title: "", message: "", onConfirm: null });
-      }
-    });
+    onUpdate(Object.assign({}, dog, { documents: docs.filter(function(d){ return d.id !== id; }) }));
+    setConfirmDialog({ show: false, id: null });
   }
 
-  function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+  function getIcon(type) {
+    if (type === "gdrive") return "🟢";
+    if (type === "icloud") return "☁️";
+    if (type === "dropbox") return "📦";
+    if (type === "photo") return "🖼️";
+    if (type === "pdf") return "📄";
+    return "🔗";
   }
 
-  function getFileIcon(type, name) {
-    var n = name || "";
-    if (!type) return "📎";
-    if (type.includes("pdf")) return "📄";
-    if (type.includes("image")) return "🖼️";
-    if (type.includes("word") || type.includes("document") || n.endsWith(".doc") || n.endsWith(".docx")) return "📝";
-    if (type.includes("excel") || type.includes("sheet") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "📊";
-    if (type.includes("text") || n.endsWith(".txt")) return "📃";
-    return "📎";
+  function getLabel(type) {
+    if (type === "gdrive") return "Google Drive";
+    if (type === "icloud") return "iCloud";
+    if (type === "dropbox") return "Dropbox";
+    if (type === "photo") return "Photo";
+    if (type === "pdf") return "PDF";
+    return "Link";
   }
-  
-  function getFileCategory(type, name) {
-    var n = name || "";
-    if (!type) return "Other";
-    if (type.includes("pdf")) return "PDF";
-    if (type.includes("image")) return "Image";
-    if (type.includes("word") || type.includes("document") || n.endsWith(".doc") || n.endsWith(".docx")) return "Document";
-    if (type.includes("excel") || type.includes("sheet") || n.endsWith(".xls") || n.endsWith(".xlsx")) return "Spreadsheet";
-    if (type.includes("text") || n.endsWith(".txt")) return "Text";
-    return "Other";
-  }
-
-  // Filter and sort documents
-  var filteredDocs = docs.filter(function(doc) {
-    if (!doc || !doc.type) return false;
-    if (!searchQuery) return true;
-    var query = searchQuery.toLowerCase();
-    return (doc.name || "").toLowerCase().includes(query) || 
-           getFileCategory(doc.type, doc.name).toLowerCase().includes(query);
-  });
-
-  var sortedDocs = filteredDocs.sort(function(a, b) {
-    if (sortBy === "date") return new Date(b.uploadedAt) - new Date(a.uploadedAt);
-    if (sortBy === "name") return (a.name || "").localeCompare(b.name || "");
-    if (sortBy === "type") return getFileCategory(a.type, a.name).localeCompare(getFileCategory(b.type, b.name));
-    if (sortBy === "size") return b.size - a.size;
-    return 0;
-  });
-
-  // Calculate storage usage
-  var MAX_STORAGE = 20 * 1024 * 1024; // 20MB total per dog
-  var usedStorage = docs.reduce(function(total, doc) { return total + (doc.size || 0); }, 0);
-  var remainingStorage = MAX_STORAGE - usedStorage;
-  var usedMB = (usedStorage / (1024 * 1024)).toFixed(1);
-  var remainingMB = (remainingStorage / (1024 * 1024)).toFixed(1);
-  var usedPercent = Math.min(100, (usedStorage / MAX_STORAGE) * 100);
 
   return (
     <div className="fadeIn">
-      {/* Back Button */}
       <button onClick={onBack}
-        style={{ background:"none",border:"none",color:C.muted,fontSize:14,fontWeight:600,marginBottom:16,cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 0",transition:"color .2s" }}
-        onMouseEnter={function(e){ e.currentTarget.style.color=C.accent; }}
-        onMouseLeave={function(e){ e.currentTarget.style.color=C.muted; }}>
+        style={{ background:"none",border:"none",color:C.muted,fontSize:14,fontWeight:600,marginBottom:16,cursor:"pointer",display:"flex",alignItems:"center",gap:6,padding:"8px 0" }}>
         <span style={{ fontSize:16 }}>←</span> Back to Overview
       </button>
-      
-      {/* Upload Section */}
-      <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:24,marginBottom:20 }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16 }}>
-          <div>
-            <h3 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:800,marginBottom:4 }}>📁 Upload Documents</h3>
-            <p style={{ color:C.text,fontSize:15,fontWeight:500,opacity:0.85 }}>
-              Vet records, vaccination certificates, insurance, and more
-            </p>
-          </div>
-          <div style={{ fontSize:36 }}>🐕</div>
-        </div>
-        
-        <div style={{ display:"flex",gap:12,alignItems:"center",flexWrap:"wrap",marginBottom:16 }}>
-          {uploading ? (
-            <div style={{ flex:1,minWidth:200 }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
-                <span style={{ fontSize:14,fontWeight:700,color:C.accent }}>Uploading... {uploadProgress}%</span>
-                <button onClick={function(){ 
-                    if (uploadCancelRef.current && uploadCancelRef.current.abort) uploadCancelRef.current.abort();
-                    uploadCancelRef.current = false;
-                    setUploading(false); setUploadProgress(0); 
-                  }}
-                  style={{ background:C.red,border:"none",color:"#fff",borderRadius:8,padding:"5px 12px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-                  Cancel
-                </button>
-              </div>
-              <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden" }}>
-                <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:uploadProgress+"%",height:"100%",borderRadius:999,transition:"width .3s" }} />
-              </div>
-            </div>
-          ) : (
-            <div style={{ display:"flex",gap:8,flexWrap:"wrap" }}>
-              <button onClick={function(){ photoInputRef.current && photoInputRef.current.click(); }}
-                disabled={uploading}
-                style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"none" }}>
-                <span style={{ fontSize:18 }}>🖼️</span>Photo / Image
-              </button>
-              <button onClick={function(){ fileInputRef.current && fileInputRef.current.click(); }}
-                disabled={uploading}
-                style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.card,color:C.text,padding:"12px 20px",borderRadius:12,fontSize:14,fontWeight:700,cursor:"pointer",border:"2px solid "+C.border }}>
-                <span style={{ fontSize:18 }}>📁</span>PDF / File
-              </button>
-              <input ref={photoInputRef} type="file" accept="image/*" onChange={handleFileUpload} style={{ display:"none" }} />
-              <input ref={fileInputRef} type="file" accept="image/*,application/pdf" onChange={handleFileUpload} style={{ display:"none" }} />
-            </div>
-          )}
-          {!uploading && (
-            <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-              <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"8px 12px" }}>
-                <span style={{ fontSize:13,color:C.accent,fontWeight:600 }}>MAX PER FILE: 3MB</span>
-              </div>
-              <div style={{ background:C.blueFaint,border:"1px solid "+C.blue,borderRadius:8,padding:"8px 12px" }}>
-                <span style={{ fontSize:13,color:C.blue,fontWeight:600 }}>{docs.length} {docs.length === 1 ? "File" : "Files"}</span>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Storage Usage Bar */}
-        <div style={{ background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:16 }}>
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10 }}>
-            <p style={{ fontSize:14,fontWeight:700,color:C.text }}>Storage for {dog.name}</p>
-            <p style={{ fontSize:14,fontWeight:800,color:usedPercent > 90 ? C.red : usedPercent > 70 ? C.yellow : C.accent }}>
-              {usedMB} MB / 20 MB
-            </p>
-          </div>
-          <div style={{ background:C.border,borderRadius:999,height:10,overflow:"hidden",marginBottom:8 }}>
-            <div style={{ 
-              background: usedPercent > 90 ? "linear-gradient(90deg, "+C.red+", #ff6b6b)" : usedPercent > 70 ? "linear-gradient(90deg, "+C.yellow+", #ffd93d)" : "linear-gradient(90deg, "+C.accent+", "+C.accentGlow+")",
-              width: usedPercent + "%",
-              height: "100%",
-              borderRadius: 999,
-              transition: "width 0.3s ease"
-            }} />
-          </div>
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-            <p style={{ fontSize:13,color:C.muted,fontWeight:600 }}>
-              {remainingMB} MB remaining
-            </p>
-            <p style={{ fontSize:13,color:C.muted,fontWeight:600 }}>
-              {usedPercent.toFixed(0)}% used
-            </p>
+      {/* Header */}
+      <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20,marginBottom:20 }}>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+          <div>
+            <h3 style={{ fontFamily:"Fraunces",fontSize:20,color:C.text,fontWeight:800,marginBottom:4 }}>📁 Documents</h3>
+            <p style={{ color:C.muted,fontSize:14 }}>Add links to documents stored in Google Drive, iCloud, Dropbox, or anywhere online.</p>
           </div>
         </div>
+        <button onClick={function(){ setShowAdd(true); }}
+          style={{ background:C.accent,border:"none",color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer",marginTop:8 }}>
+          + Add Document Link
+        </button>
       </div>
 
-      {docs.length === 0 ? (
-        <div style={{ textAlign:"center",padding:"80px 20px",background:C.card,border:"1.5px solid "+C.border,borderRadius:16 }}>
-          <div style={{ fontSize:64,marginBottom:16 }}>📂</div>
-          <h3 style={{ fontFamily:"Fraunces",fontSize:24,fontWeight:700,color:C.text,marginBottom:8 }}>No Documents Yet</h3>
-          <p style={{ color:C.muted,fontSize:16,marginBottom:24 }}>Upload your first document to get started</p>
-          <label style={{ display:"inline-flex",alignItems:"center",gap:8,background:C.accent,color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:14,fontWeight:700,cursor:"pointer" }}>
-            📤 Upload Document
-            <input type="file" accept="image/*,application/pdf" onChange={handleFileUpload} disabled={uploading} style={{ display:"none" }} />
-          </label>
+      {/* Add Form */}
+      {showAdd && (
+        <div style={{ background:C.card,border:"1.5px solid "+C.accent,borderRadius:16,padding:20,marginBottom:20 }}>
+          <h4 style={{ fontFamily:"Fraunces",fontSize:17,color:C.text,fontWeight:800,marginBottom:16 }}>Add Document Link</h4>
+          <div style={{ marginBottom:12 }}>
+            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Document Name</label>
+            <input value={nameInput} onChange={function(e){ setNameInput(e.target.value); }}
+              placeholder="e.g. Vet Records 2025, Vaccination Certificate"
+              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15,boxSizing:"border-box" }} />
+          </div>
+          <div style={{ marginBottom:12 }}>
+            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Link / URL</label>
+            <input value={urlInput} onChange={function(e){ setUrlInput(e.target.value); }}
+              placeholder="Paste Google Drive, iCloud, Dropbox link here"
+              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15,boxSizing:"border-box" }} />
+          </div>
+          <div style={{ marginBottom:16 }}>
+            <label style={{ fontSize:13,fontWeight:700,color:C.muted,display:"block",marginBottom:6 }}>Type</label>
+            <select value={typeInput} onChange={function(e){ setTypeInput(e.target.value); }}
+              style={{ width:"100%",padding:"12px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:15 }}>
+              <option value="gdrive">🟢 Google Drive</option>
+              <option value="icloud">☁️ iCloud</option>
+              <option value="dropbox">📦 Dropbox</option>
+              <option value="photo">🖼️ Photo</option>
+              <option value="pdf">📄 PDF</option>
+              <option value="other">🔗 Other Link</option>
+            </select>
+          </div>
+          <div style={{ display:"flex",gap:10 }}>
+            <button onClick={addDoc}
+              style={{ flex:1,background:C.accent,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
+              Save
+            </button>
+            <button onClick={function(){ setShowAdd(false); setNameInput(""); setUrlInput(""); setTypeInput("other"); }}
+              style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
+              Cancel
+            </button>
+          </div>
+          <p style={{ fontSize:12,color:C.muted,marginTop:12,lineHeight:1.5 }}>
+            💡 <strong>How to get a link:</strong> In Google Drive, right-click a file → Share → Copy link. In iCloud, open the file → Share → Copy Link.
+          </p>
+        </div>
+      )}
+
+      {/* Document List */}
+      {docs.length === 0 && !showAdd ? (
+        <div style={{ textAlign:"center",padding:48,background:C.card,border:"1.5px solid "+C.border,borderRadius:16 }}>
+          <div style={{ fontSize:56,marginBottom:12 }}>📂</div>
+          <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:700,color:C.text,marginBottom:8 }}>No Documents Yet</p>
+          <p style={{ color:C.muted,fontSize:14,marginBottom:20 }}>Add links to vet records, vaccination certificates, insurance documents and more.</p>
+          <button onClick={function(){ setShowAdd(true); }}
+            style={{ background:C.accent,border:"none",color:"#fff",padding:"12px 24px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
+            + Add Your First Document
+          </button>
         </div>
       ) : (
-        <div>
-          {/* Search and Sort Bar */}
-          <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:12,padding:16,marginBottom:16,display:"flex",gap:12,flexWrap:"wrap",alignItems:"center" }}>
-            <div style={{ flex:1,minWidth:200,position:"relative" }}>
-              <input 
-                type="text"
-                placeholder="🔍 Search documents..."
-                value={searchQuery}
-                onChange={function(e){ setSearchQuery(e.target.value); }}
-                style={{ width:"100%",padding:"10px 14px",fontSize:14 }}
-              />
-              {searchQuery && (
-                <button onClick={function(){ setSearchQuery(""); }}
-                  style={{ position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",background:"none",border:"none",color:C.muted,fontSize:18,cursor:"pointer" }}>
-                  ✕
-                </button>
-              )}
-            </div>
-            <div style={{ display:"flex",alignItems:"center",gap:8 }}>
-              <span style={{ fontSize:13,color:C.muted,fontWeight:600 }}>Sort:</span>
-              <select value={sortBy} onChange={function(e){ setSortBy(e.target.value); }} style={{ padding:"8px 12px",fontSize:13,fontWeight:600 }}>
-                <option value="date">📅 Date</option>
-                <option value="name">🔤 Name</option>
-                <option value="type">📋 Type</option>
-                <option value="size">📊 Size</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Document Grid */}
-          <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill, minmax(280px, 1fr))",gap:14 }}>
-            {sortedDocs.map(function(doc) {
-              var category = getFileCategory(doc.type, doc.name);
-              return (
-                <div key={doc.id} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:12,padding:16,transition:"all .2s",cursor:"pointer" }}
-                  onMouseEnter={function(e){ e.currentTarget.style.borderColor=C.accent; e.currentTarget.style.transform="translateY(-2px)"; }}
-                  onMouseLeave={function(e){ e.currentTarget.style.borderColor=C.border; e.currentTarget.style.transform="translateY(0)"; }}>
-                  
-                  <div style={{ display:"flex",alignItems:"flex-start",gap:12,marginBottom:12 }}>
-                    <div style={{ fontSize:40,flexShrink:0 }}>{getFileIcon(doc.type, doc.name)}</div>
-                    <div style={{ flex:1,minWidth:0 }}>
-                      <p style={{ fontWeight:700,fontSize:14,color:C.text,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
-                      <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:4 }}>
-                        <span style={{ fontSize:11,color:C.accent,background:C.accentFaint,padding:"2px 8px",borderRadius:4,fontWeight:600 }}>{category}</span>
-                        <span style={{ fontSize:11,color:C.blue,background:C.blueFaint,padding:"2px 8px",borderRadius:4,fontWeight:600 }}>{formatFileSize(doc.size)}</span>
-                      </div>
-                      <p style={{ fontSize:12,color:C.muted,fontWeight:500 }}>
-                        {timeAgo(doc.uploadedAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div style={{ display:"flex",gap:6 }}>
-                    <button onClick={function(){ openPreview(doc); }}
-                      style={{ flex:1,background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s" }}
-                      onMouseEnter={function(e){ e.currentTarget.style.background=C.blue; e.currentTarget.style.color="#fff"; }}
-                      onMouseLeave={function(e){ e.currentTarget.style.background=C.blueFaint; e.currentTarget.style.color=C.blue; }}>
-                      👁️ Preview
-                    </button>
-                    <a href={doc.url || doc.data} download={doc.name} style={{ flex:1,textDecoration:"none" }}>
-                      <button style={{ width:"100%",background:C.accentFaint,border:"1.5px solid "+C.accent,color:C.accent,borderRadius:8,padding:"8px",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s" }}
-                        onMouseEnter={function(e){ e.currentTarget.style.background=C.accent; e.currentTarget.style.color="#fff"; }}
-                        onMouseLeave={function(e){ e.currentTarget.style.background=C.accentFaint; e.currentTarget.style.color=C.accent; }}>
-                        📥 Download
-                      </button>
-                    </a>
-                    <button type="button" onClick={function(){ deleteDoc(doc.id); }}
-                      style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:600,cursor:"pointer",transition:"all .15s" }}
-                      onMouseEnter={function(e){ e.currentTarget.style.background=C.red; e.currentTarget.style.color="#fff"; }}
-                      onMouseLeave={function(e){ e.currentTarget.style.background=C.redFaint; e.currentTarget.style.color=C.red; }}>
-                      🗑️
-                    </button>
+        <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+          {docs.map(function(doc) {
+            return (
+              <div key={doc.id} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:16,display:"flex",alignItems:"center",gap:14 }}>
+                <div style={{ fontSize:36,flexShrink:0 }}>{getIcon(doc.type)}</div>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <p style={{ fontWeight:700,fontSize:15,color:C.text,marginBottom:4,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{doc.name}</p>
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:11,color:C.accent,background:C.accentFaint,padding:"2px 8px",borderRadius:4,fontWeight:600 }}>{getLabel(doc.type)}</span>
+                    <span style={{ fontSize:12,color:C.muted }}>{doc.addedAt ? new Date(doc.addedAt).toLocaleDateString() : ""}</span>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+                <div style={{ display:"flex",gap:8,flexShrink:0 }}>
+                  <a href={doc.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration:"none" }}>
+                    <button style={{ background:C.blueFaint,border:"1.5px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                      Open
+                    </button>
+                  </a>
+                  <button onClick={function(){ setConfirmDialog({ show: true, id: doc.id }); }}
+                    style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"8px 10px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                    🗑️
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
-          {searchQuery && sortedDocs.length === 0 && (
-            <div style={{ textAlign:"center",padding:40,background:C.card,border:"1.5px solid "+C.border,borderRadius:12 }}>
-              <div style={{ fontSize:48,marginBottom:12 }}>🔍</div>
-              <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:700,color:C.text,marginBottom:6 }}>No Results Found</p>
-              <p style={{ color:C.muted,fontSize:14 }}>Try a different search term</p>
+      {/* Confirm Delete */}
+      {confirmDialog.show && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:9999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
+          <div style={{ background:C.card,borderRadius:16,padding:24,maxWidth:340,width:"100%",border:"1.5px solid "+C.border }}>
+            <h3 style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:8 }}>Delete Document?</h3>
+            <p style={{ color:C.muted,fontSize:14,marginBottom:20 }}>This will remove the link from PawTraks. The original file will not be deleted.</p>
+            <div style={{ display:"flex",gap:10 }}>
+              <button onClick={function(){ deleteDoc(confirmDialog.id); }}
+                style={{ flex:1,background:C.red,border:"none",color:"#fff",padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
+                Delete
+              </button>
+              <button onClick={function(){ setConfirmDialog({ show: false, id: null }); }}
+                style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,padding:"12px",borderRadius:10,fontSize:15,fontWeight:700,cursor:"pointer" }}>
+                Cancel
+              </button>
             </div>
-          )}
-        </div>
-      )}
-      
-      {previewDoc && (
-        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.95)",zIndex:9999,display:"flex",flexDirection:"column" }}
-          onClick={function(){ setPreviewDoc(null); setZoomLevel(100); }}>
-          {/* Header bar */}
-          <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"12px 16px",background:"rgba(0,0,0,0.8)",flexShrink:0 }}
-            onClick={function(e){ e.stopPropagation(); }}>
-            <h3 style={{ fontFamily:"Fraunces",fontSize:15,color:"#fff",fontWeight:700,margin:0,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",marginRight:8 }}>{previewDoc.name}</h3>
-            <div style={{ display:"flex",alignItems:"center",gap:6,flexShrink:0 }}>
-              {(previewDoc.type.includes("image") || previewDoc.type.includes("pdf") || isDocx(previewDoc)) && (
-                <>
-                  <button type="button" onClick={function(){ setZoomLevel(Math.max(25, zoomLevel - 25)); }}
-                    style={{ background:"rgba(244,162,77,0.2)",border:"1px solid #f4a24d",color:"#f4a24d",borderRadius:8,padding:"6px 12px",fontSize:16,fontWeight:700,cursor:"pointer" }}>−</button>
-                  <span style={{ color:"#fff",fontSize:13,fontWeight:600,minWidth:48,textAlign:"center" }}>{zoomLevel}%</span>
-                  <button type="button" onClick={function(){ setZoomLevel(Math.min(300, zoomLevel + 25)); }}
-                    style={{ background:"rgba(244,162,77,0.2)",border:"1px solid #f4a24d",color:"#f4a24d",borderRadius:8,padding:"6px 12px",fontSize:16,fontWeight:700,cursor:"pointer" }}>+</button>
-                  <button type="button" onClick={function(){ setZoomLevel(100); }}
-                    style={{ background:"rgba(96,165,250,0.2)",border:"1px solid #60a5fa",color:"#60a5fa",borderRadius:8,padding:"6px 10px",fontSize:12,fontWeight:600,cursor:"pointer" }}>Fit</button>
-                </>
-              )}
-              <button onClick={function(){ setPreviewDoc(null); setZoomLevel(100); }}
-                style={{ background:"rgba(255,255,255,0.15)",border:"none",color:"#fff",borderRadius:8,width:32,height:32,fontSize:16,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center" }}>✕</button>
-            </div>
-          </div>
-          {/* Preview area */}
-          <div style={{ flex:1,overflow:"auto",display:"flex",alignItems:"center",justifyContent:"center",padding:8 }}
-            onClick={function(e){ e.stopPropagation(); }}>
-            {previewDoc.type.includes("image") ? (
-              <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",overflow:"auto" }}>
-                <img src={previewDoc.url || previewDoc.data} alt={previewDoc.name}
-                  style={{ 
-                    maxWidth: zoomLevel === 100 ? "100%" : (zoomLevel + "%"),
-                    maxHeight: zoomLevel === 100 ? "100%" : "none",
-                    width: zoomLevel === 100 ? "auto" : "auto",
-                    height: zoomLevel === 100 ? "auto" : "auto",
-                    objectFit:"contain",
-                    display:"block",
-                    transition:"all .2s"
-                  }} />
-              </div>
-            ) : previewDoc.type.includes("pdf") ? (
-              <iframe src={previewDoc.url || pdfBlobUrl} style={{ width:"100%",height:"100%",border:"none",borderRadius:8 }} title={previewDoc.name} />
-            ) : isDocx(previewDoc) ? (
-              <div style={{ width:"100%",height:"100%",overflow:"auto",background:"#fff",borderRadius:8,padding:"24px 32px",color:"#222",fontSize:15,lineHeight:1.7 }}>
-                {docxLoading ? (
-                  <div style={{ display:"flex",alignItems:"center",justifyContent:"center",height:"100%",color:"#888",fontSize:16 }}>Loading document...</div>
-                ) : (
-                  <div dangerouslySetInnerHTML={{ __html: docxHtml || "" }} />
-                )}
-              </div>
-            ) : (
-              <div style={{ textAlign:"center",padding:40 }}>
-                <div style={{ fontSize:64,marginBottom:16 }}>{getFileIcon(previewDoc.type)}</div>
-                <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:700,color:"#fff",marginBottom:8 }}>Preview Not Available</p>
-                <p style={{ color:"rgba(255,255,255,0.7)",fontSize:16,marginBottom:24 }}>Download the file to view it on your device.</p>
-                <a href={previewDoc.data} download={previewDoc.name} style={{ textDecoration:"none" }}>
-                  <button className="btnP" style={{ fontSize:15,padding:"14px 28px" }}>📥 Download File</button>
-                </a>
-              </div>
-            )}
           </div>
         </div>
       )}
-      
-      {/* Alert Dialog */}
-      <AlertDialog 
-        show={alertDialog.show}
-        title={alertDialog.title}
-        message={alertDialog.message}
-        onClose={function(){ setAlertDialog({ show: false, title: "", message: "" }); }}
-      />
-      
-      {/* Confirm Dialog */}
-      <ConfirmDialog
-        show={confirmDialog.show}
-        title={confirmDialog.title}
-        message={confirmDialog.message}
-        onConfirm={confirmDialog.onConfirm}
-        onCancel={function(){ setConfirmDialog({ show: false, title: "", message: "", onConfirm: null }); }}
-      />
     </div>
   );
 }
+
+
 
 // heat cycle tracker
 function HeatTab({ dog, onUpdate, earnTP }) {
