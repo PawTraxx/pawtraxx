@@ -3066,7 +3066,17 @@ function WeightTab({ dog, onUpdate, earnTP, setCooldownAlert }) {
 function DocumentsTab({ dog, onUpdate, onBack }) {
   var C = useTheme();
   var isMobile = useIsMobile();
-  var docs = dog.documents || [];
+  var docs = (dog.documents || []).map(function(d) {
+    return {
+      id: d.id || String(Date.now()),
+      name: d.name || "Unknown file",
+      type: d.type || "application/octet-stream",
+      url: d.url || null,
+      data: d.data || null,
+      uploadedAt: d.uploadedAt || new Date().toISOString(),
+      size: d.size || 0
+    };
+  });
   var [uploading, setUploading] = useState(false);
   var [uploadProgress, setUploadProgress] = useState(0);
   var uploadCancelRef = useRef(false);
@@ -3282,7 +3292,7 @@ function DocumentsTab({ dog, onUpdate, onBack }) {
 
   var sortedDocs = filteredDocs.sort(function(a, b) {
     if (sortBy === "date") return new Date(b.uploadedAt) - new Date(a.uploadedAt);
-    if (sortBy === "name") return a.name.localeCompare(b.name);
+    if (sortBy === "name") return (a.name || "").localeCompare(b.name || "");
     if (sortBy === "type") return getFileCategory(a.type, a.name).localeCompare(getFileCategory(b.type, b.name));
     if (sortBy === "size") return b.size - a.size;
     return 0;
