@@ -2063,7 +2063,11 @@ function Auth({ onLogin }) {
     // Handle family code — link this user to owner
     if (form.familyCode && form.familyCode.trim()) {
       var fCode = form.familyCode.trim().toUpperCase();
+      console.log("Looking for family code:", fCode);
+      console.log("All users:", Object.keys(users));
+      Object.values(users).forEach(function(u2){ console.log(u2.email, "familyCode:", u2.familyCode); });
       var owner = Object.values(users).find(function(u2){ return u2.familyCode && u2.familyCode.toUpperCase() === fCode; });
+      console.log("Found owner:", owner ? owner.email : "NONE");
       if (owner && owner.email !== form.email) {
         var currentFamily = owner.family || [];
         if (currentFamily.length < 4) {
