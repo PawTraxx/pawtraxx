@@ -7613,8 +7613,16 @@ export default function PawTraks() {
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
     allUsers[u.email] = Object.assign({}, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
 
+    // Ensure familyCode exists — generate once and save permanently
+    if (!allUsers[u.email].familyCode) {
+      allUsers[u.email].familyCode = (u.name || "user").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(u.email.charCodeAt(0)) + String(u.email.length) + String(u.createdAt ? new Date(u.createdAt).getTime().toString().slice(-3) : "000");
+    }
+    if (!allUsers[u.email].family) {
+      allUsers[u.email].family = [];
+    }
+
     // If this is a family member, load the owner's dogs
-    var updatedUser = Object.assign({}, u, { sessions: sessions, lastLoginAt: new Date().toISOString() });
+    var updatedUser = Object.assign({}, u, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
     if (u.familyOf) {
       var owner = allUsers[u.familyOf];
       if (owner) {
