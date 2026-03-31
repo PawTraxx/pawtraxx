@@ -1658,6 +1658,8 @@ function GoogleAuthModal({ onClose, onLogin }) {
   var [pendingEmail, setPendingEmail] = useState("");
   var [pendingName, setPendingName] = useState("");
   var [inviteInput, setInviteInput] = useState("");
+  var [referralInput, setReferralInput] = useState("");
+  var [familyInput, setFamilyInput] = useState("");
 
   // Saved Google accounts (simulate previously signed-in accounts)
   var savedRaw = localStorage.getItem("pt_google_accounts");
@@ -1710,6 +1712,38 @@ function GoogleAuthModal({ onClose, onLogin }) {
         referralCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
         referralCount: 0
       };
+
+      // Handle referral code
+      if (referralInput.trim()) {
+        var refCode = referralInput.trim().toUpperCase();
+        var referrer = Object.values(users).find(function(u){ return u.referralCode && u.referralCode.toUpperCase() === refCode; });
+        if (referrer && referrer.email !== pendingEmail) {
+          var refTP = (referrer.trainerPoints || 0) + 250;
+          var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + pendingName + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
+          users[referrer.email] = Object.assign({}, referrer, { trainerPoints: refTP, tpLog: refLog, referralCount: (referrer.referralCount || 0) + 1 });
+        }
+      }
+
+      // Handle family code
+      if (familyInput.trim()) {
+        var fCode = familyInput.trim().toUpperCase();
+        var owner = Object.values(users).find(function(u){ return u.familyCode && u.familyCode.toUpperCase() === fCode; });
+        if (owner && owner.email !== pendingEmail) {
+          var currentFamily = owner.family || [];
+          if (currentFamily.length < 4) {
+            user.familyOf = owner.email;
+            currentFamily = currentFamily.concat([{ name: pendingName, email: pendingEmail }]);
+            users[owner.email] = Object.assign({}, owner, { family: currentFamily });
+          } else {
+            setStep("invite");
+            setErr("This family account is full (max 4 members)."); return;
+          }
+        } else {
+          setStep("invite");
+          setErr("Invalid family code. Please check and try again."); return;
+        }
+      }
+
       users[pendingEmail] = user;
       localStorage.setItem("pt_users", JSON.stringify(users));
       sendSimulatedEmail(
@@ -1773,9 +1807,23 @@ function GoogleAuthModal({ onClose, onLogin }) {
               <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>PawTraks is invite only. Enter your invite code to continue.</p>
               <input
                 autoFocus
-                placeholder="Invite code"
+                placeholder="Invite code (required)"
                 value={inviteInput}
                 onChange={function(e){ setInviteInput(e.target.value); setErr(""); }}
+                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
+                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:10 }}
+              />
+              <input
+                placeholder="Referral code (optional)"
+                value={referralInput}
+                onChange={function(e){ setReferralInput(e.target.value); setErr(""); }}
+                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
+                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:10 }}
+              />
+              <input
+                placeholder="Family code (optional — join someone's family)"
+                value={familyInput}
+                onChange={function(e){ setFamilyInput(e.target.value); setErr(""); }}
                 onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
                 style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:8 }}
               />
