@@ -1729,7 +1729,11 @@ function GoogleAuthModal({ onClose, onLogin }) {
       // Handle family code
       if (familyInput.trim()) {
         var fCode = familyInput.trim().toUpperCase();
-        var owner = Object.values(users).find(function(u){ return u.familyCode && u.familyCode.toUpperCase() === fCode; });
+        var owner = Object.values(users).find(function(u){
+          var stored = u.familyCode ? u.familyCode.toUpperCase() : "";
+          var computed = makeFamilyCode(u.email).toUpperCase();
+          return stored === fCode || computed === fCode;
+        });
         if (owner && owner.email !== pendingEmail) {
           var currentFamily = owner.family || [];
           if (currentFamily.length < 4) {
@@ -2063,11 +2067,12 @@ function Auth({ onLogin }) {
     // Handle family code — link this user to owner
     if (form.familyCode && form.familyCode.trim()) {
       var fCode = form.familyCode.trim().toUpperCase();
-      console.log("Looking for family code:", fCode);
-      console.log("All users:", Object.keys(users));
-      Object.values(users).forEach(function(u2){ console.log(u2.email, "familyCode:", u2.familyCode); });
-      var owner = Object.values(users).find(function(u2){ return u2.familyCode && u2.familyCode.toUpperCase() === fCode; });
-      console.log("Found owner:", owner ? owner.email : "NONE");
+      var allUsersForFamily = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      var owner = Object.values(allUsersForFamily).find(function(u2){
+        var stored = u2.familyCode ? u2.familyCode.toUpperCase() : "";
+        var computed = makeFamilyCode(u2.email).toUpperCase();
+        return stored === fCode || computed === fCode;
+      });
       if (owner && owner.email !== form.email) {
         var currentFamily = owner.family || [];
         if (currentFamily.length < 4) {
@@ -6576,6 +6581,13 @@ var MASTER_EMAIL = "pawtraks@master.com";
 var MASTER_PASS  = "PawTraks@Master1!";
 var INVITE_CODE = "PTraks2026";
 
+function makeFamilyCode(email) {
+  var hash = 0;
+  for (var i = 0; i < email.length; i++) { hash = ((hash << 5) - hash) + email.charCodeAt(i); hash |= 0; }
+  var n = Math.abs(hash) % 900000 + 100000;
+  return "PAW" + n;
+}
+
 // admin login page
 function AdminLogin({ onAuth, onBack }) {
   var C = useTheme();
@@ -7332,16 +7344,37 @@ export default function PawTraks() {
     return function() { document.removeEventListener("keydown", onKey); };
   }, [user, dogs, activeDog, highlightedDogId, focusedSection, showAdd, showEditDog, showProfile, showWelcome, showSearch, search]);
 
+  // One-time migration — assign familyCode to ALL existing accounts that don't have one
   useEffect(function() {
-    var raw = localStorage.getItem("pt_session");
+    var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    var changed = false;
+    Object.keys(users).forEach(function(email) {
+      if (!users[email].familyCode) {
+        users[email].familyCode = makeFamilyCode(email);
+        changed = true;
+      }
+      if (!users[email].family) {
+        users[email].family = [];
+        changed = true;
+      }
+    });
+    if (changed) localStorage.setItem("pt_users", JSON.stringify(users));
+  }, []);
     if (!raw) return;
     try {
       var s = JSON.parse(raw);
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var u = users[s.email];
       if (!u) { localStorage.removeItem("pt_session"); return; }
+      // Always ensure familyCode is set
+      if (!u.familyCode) {
+        u.familyCode = makeFamilyCode(s.email);
+        users[s.email] = u;
+        localStorage.setItem("pt_users", JSON.stringify(users));
+      }
+      if (!u.family) { u.family = []; }
       setUser(u);
-      setDogs(u.dogs || []);
+      setDogs(u.familyOf ? [] : (u.dogs || []));
     } catch(e) {
       localStorage.removeItem("pt_session");
     }
@@ -7617,9 +7650,9 @@ export default function PawTraks() {
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
     allUsers[u.email] = Object.assign({}, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
 
-    // Ensure familyCode exists — generate once and save permanently
+    // Ensure familyCode exists — always deterministic from email
     if (!allUsers[u.email].familyCode) {
-      allUsers[u.email].familyCode = (u.name || "user").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(u.email.charCodeAt(0)) + String(u.email.length) + String(u.createdAt ? new Date(u.createdAt).getTime().toString().slice(-3) : "000");
+      allUsers[u.email].familyCode = makeFamilyCode(u.email);
     }
     if (!allUsers[u.email].family) {
       allUsers[u.email].family = [];
