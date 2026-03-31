@@ -1710,7 +1710,9 @@ function GoogleAuthModal({ onClose, onLogin }) {
         dogs: [],
         createdAt: new Date().toISOString(),
         referralCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
-        referralCount: 0
+        referralCount: 0,
+        familyCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4),
+        family: []
       };
 
       // Handle referral code
@@ -2042,7 +2044,9 @@ function Auth({ onLogin }) {
       dogs:[], 
       createdAt:new Date().toISOString(),
       referralCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
-      referralCount: 0
+      referralCount: 0,
+      familyCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4),
+      family: []
     };
 
     // Handle referral — give 250 TP to referrer
@@ -8326,11 +8330,14 @@ export default function PawTraks() {
       {showFamily && (function(){
         var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
         var myFamily = user.family || [];
-        var familyCode = user.familyCode || (user.name || "").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-3);
+        var familyCode = user.familyCode;
 
-        if (!user.familyCode) {
+        // Fallback: generate and save if somehow missing (old accounts)
+        if (!familyCode) {
+          familyCode = (user.name || "").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4);
           var all2 = JSON.parse(localStorage.getItem("pt_users") || "{}");
           if (all2[user.email]) { all2[user.email].familyCode = familyCode; localStorage.setItem("pt_users", JSON.stringify(all2)); }
+          setUser(function(u){ return Object.assign({}, u, { familyCode: familyCode }); });
         }
 
         function removeMember(email) {
