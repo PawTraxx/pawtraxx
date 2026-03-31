@@ -7360,6 +7360,9 @@ export default function PawTraks() {
     });
     if (changed) localStorage.setItem("pt_users", JSON.stringify(users));
   }, []);
+
+  useEffect(function() {
+    var raw = localStorage.getItem("pt_session");
     if (!raw) return;
     try {
       var s = JSON.parse(raw);
