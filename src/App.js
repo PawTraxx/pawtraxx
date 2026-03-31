@@ -492,32 +492,40 @@ var COOLDOWNS = {
 function getFedCooldown(dog) {
   var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
   if (isNaN(age)) age = 1;
-  if (age < 0.083) return 0.5  * 3600000; // Under 1 month: every 30 minutes
-  if (age < 0.5)  return 1.5 * 3600000; // Under 6 months: every 1.5 hours
-  if (age < 1)    return 2   * 3600000; // 6-12 months: every 2 hours
-  if (age < 3)    return 3   * 3600000; // 1-3 years: every 3 hours
-  if (age < 8)    return 4   * 3600000; // Adult: every 4 hours
-  return           5   * 3600000;        // Senior 8+: every 5 hours
+  if (age < 0.25)  return 0.5  * 3600000; // Under 3 months: every 30 minutes
+  if (age < 0.5)   return 2    * 3600000; // 3-6 months: every 2 hours
+  if (age < 1)     return 4    * 3600000; // 6-12 months: every 4 hours
+  if (age < 7)     return 8    * 3600000; // Adult (1-7 years): every 8 hours
+  return             8    * 3600000;       // Senior 7+: every 8 hours
+}
+
+function getWaterCooldown(dog) {
+  var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
+  if (isNaN(age)) age = 1;
+  if (age < 0.25)  return 0.5  * 3600000; // Under 3 months: every 30 minutes
+  if (age < 0.5)   return 1    * 3600000; // 3-6 months: every 1 hour
+  if (age < 1)     return 4    * 3600000; // 6-12 months: every 4 hours
+  if (age < 7)     return 5    * 3600000; // Adult (1-7 years): every 5 hours
+  return             3    * 3600000;       // Senior 7+: every 3 hours
 }
 
 function getOutsideCooldown(dog) {
   var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
   if (isNaN(age)) age = 1;
-  if (age < 0.5)  return 0.5  * 3600000; // Under 6 months: every 30 min
-  if (age < 1)    return 1    * 3600000; // 6-12 months: every 1 hour
-  if (age < 3)    return 1.5  * 3600000; // 1-3 years: every 1.5 hours
-  if (age < 8)    return 4    * 3600000; // Adult: every 4 hours
-  return           3    * 3600000;        // Senior 8+: every 3 hours
+  if (age < 0.25)  return 0.5  * 3600000; // Under 3 months: every 30 minutes
+  if (age < 0.5)   return 2    * 3600000; // 3-6 months: every 2 hours
+  if (age < 1)     return 3    * 3600000; // 6-12 months: every 3 hours
+  if (age < 7)     return 8    * 3600000; // Adult (1-7 years): every 8 hours
+  return             6    * 3600000;       // Senior 7+: every 6 hours
 }
 
 function getCooldownLabel(dog) {
   var age = (dog && dog.age !== undefined && dog.age !== "") ? parseFloat(dog.age) : 1;
   if (isNaN(age)) age = 1;
-  if (age < 0.083) return "Newborn (under 1 mo)";
-  if (age < 0.5) return "Puppy (under 6 mo)";
-  if (age < 1)   return "Puppy (6–12 mo)";
-  if (age < 3)   return "Young adult";
-  if (age < 8)   return "Adult";
+  if (age < 0.25) return "Puppy (under 3 mo)";
+  if (age < 0.5)  return "Puppy (3-6 mo)";
+  if (age < 1)    return "Puppy (6-12 mo)";
+  if (age < 7)    return "Adult";
   return "Senior";
 }
 
@@ -1698,7 +1706,9 @@ function GoogleAuthModal({ onClose, onLogin }) {
         email: pendingEmail,
         googleAuth: true,
         dogs: [],
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        referralCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
+        referralCount: 0
       };
       users[pendingEmail] = user;
       localStorage.setItem("pt_users", JSON.stringify(users));
@@ -1871,7 +1881,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
 function Auth({ onLogin }) {
   var C = useTheme();
   var [mode, setMode] = useState("login"); // "login" | "register" | "forgot" | "otp" | "reset"
-  var [form, setForm] = useState({ name:"", email:"", password:"", phone:"", inviteCode:"" });
+  var [form, setForm] = useState({ name:"", email:"", password:"", phone:"", inviteCode:"", referralCode:"", familyCode:"" });
   var [err, setErr] = useState("");
   var [msg, setMsg] = useState("");
   var [otpInput, setOtpInput] = useState("");
@@ -1976,7 +1986,46 @@ function Auth({ onLogin }) {
     setErr("");
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    var u = { name:form.name, email:form.email, password:form.password, phone:form.phone, dogs:[], createdAt:new Date().toISOString() };
+    var u = { 
+      name:form.name, 
+      email:form.email, 
+      password:form.password, 
+      phone:form.phone, 
+      dogs:[], 
+      createdAt:new Date().toISOString(),
+      referralCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
+      referralCount: 0
+    };
+
+    // Handle referral — give 250 TP to referrer
+    if (form.referralCode && form.referralCode.trim()) {
+      var refCode = form.referralCode.trim().toUpperCase();
+      var referrer = Object.values(users).find(function(u2){ return u2.referralCode && u2.referralCode.toUpperCase() === refCode; });
+      if (referrer && referrer.email !== form.email) {
+        var refTP = (referrer.trainerPoints || 0) + 250;
+        var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + form.name + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
+        users[referrer.email] = Object.assign({}, referrer, { trainerPoints: refTP, tpLog: refLog, referralCount: (referrer.referralCount || 0) + 1 });
+      }
+    }
+
+    // Handle family code — link this user to owner
+    if (form.familyCode && form.familyCode.trim()) {
+      var fCode = form.familyCode.trim().toUpperCase();
+      var owner = Object.values(users).find(function(u2){ return u2.familyCode && u2.familyCode.toUpperCase() === fCode; });
+      if (owner && owner.email !== form.email) {
+        var currentFamily = owner.family || [];
+        if (currentFamily.length < 4) {
+          u.familyOf = owner.email;
+          u.dogs = [];
+          currentFamily = currentFamily.concat([{ name: form.name, email: form.email }]);
+          users[owner.email] = Object.assign({}, owner, { family: currentFamily });
+        } else {
+          setErr("This family account is full (max 4 members)."); return;
+        }
+      } else if (form.familyCode.trim()) {
+        setErr("Invalid family code. Please check and try again."); return;
+      }
+    }
     users[form.email] = u;
     localStorage.setItem("pt_users", JSON.stringify(users));
     sendSimulatedEmail(
@@ -2130,6 +2179,8 @@ function Auth({ onLogin }) {
               {mode === "register" && (
                 <FF label="Invite Code" hint="Required to create an account">
                   <input placeholder="Enter your invite code" value={form.inviteCode} onChange={function(e){upd("inviteCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
+                  <input placeholder="Referral code (optional)" value={form.referralCode} onChange={function(e){upd("referralCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
+                  <input placeholder="Family code (optional — join someone's family)" value={form.familyCode} onChange={function(e){upd("familyCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
                 </FF>
               )}
               {msg && <p style={{ color:C.green,fontSize:13,marginBottom:12,lineHeight:1.5 }}>{msg}</p>}
@@ -4643,7 +4694,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
         <button onClick={function(){
           var cooldownTimestamps = dog.cooldownTimestamps || {};
           var lastWaterCooldown = cooldownTimestamps.water;
-          var fedCooldownMs = getFedCooldown(dog);
+          var fedCooldownMs = getWaterCooldown(dog);
           var waterCooldown = isOnCooldown(lastWaterCooldown, fedCooldownMs);
           if (waterCooldown) {
             var remaining = getCooldownRemaining(lastWaterCooldown, fedCooldownMs);
@@ -4998,260 +5049,706 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
 function TrainerView({ user, dogs, onShowRankTiers }) {
   var C = useTheme();
   var tp = user.trainerPoints || 0;
-  var uLvl = getTrainerRank(tp);
-  var nxtLvl = TRAINER_RANKS.find(function(l){ return l.min > tp; }) || null;
-  var toNxt = nxtLvl ? nxtLvl.min - tp : 0;
-  var pct = nxtLvl ? Math.round(((tp - uLvl.min) / (nxtLvl.min - uLvl.min)) * 100) : 100;
   var recentLog = (user.tpLog || []).slice(-8).reverse();
+  var [showStore, setShowStore] = useState(false);
+  var [activeTab, setActiveTab] = useState("overview");
+  var [openDogId, setOpenDogId] = useState(null);
+  var streak = (user.careStreak && user.careStreak.days) || 0;
+  var referralCode = user.referralCode || "";
 
-  // Per-dog badge counts
-  var dogBadges = dogs.map(function(d){
+  // Generate referral code for existing users who don't have one
+  if (!referralCode && user.email) {
+    var generatedCode = (user.name || "USER").replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4);
+    var allU = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    if (allU[user.email]) {
+      allU[user.email].referralCode = generatedCode;
+      localStorage.setItem("pt_users", JSON.stringify(allU));
+    }
+    referralCode = generatedCode;
+  }
+  var referralCount = user.referralCount || 0;
+  var [copied, setCopied] = useState(false);
+
+  function copyReferralCode() {
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(referralCode).then(function(){ setCopied(true); setTimeout(function(){ setCopied(false); }, 2000); });
+    }
+  }
+
+  // Per-dog stats
+  var dogStats = dogs.map(function(d) {
     var b = computeBadges(d, dogs);
-    return { dog:d, earned:b.filter(function(x){ return x.earned; }).length, total:b.length };
+    var earned = b.filter(function(x){ return x.earned; }).length;
+    var log = d.activityLog || [];
+    var today = new Date().toDateString();
+    var todayLogs = log.filter(function(e){ return new Date(e.timestamp).toDateString() === today; });
+    var fedToday = todayLogs.filter(function(e){ return e.type === "fed"; }).length;
+    var waterToday = todayLogs.filter(function(e){ return e.type === "water"; }).length;
+    var outsideToday = todayLogs.filter(function(e){ return e.type === "outside"; }).length;
+    return { dog:d, earned:earned, total:b.length, fedToday:fedToday, waterToday:waterToday, outsideToday:outsideToday, totalLogs:log.length };
   });
-  var totalEarned = dogBadges.reduce(function(s,x){ return s+x.earned; }, 0);
-  var totalPossible = dogBadges.reduce(function(s,x){ return s+x.total; }, 0);
 
-  // Next 3 upcoming tiers
-  var upcoming = TRAINER_RANKS.filter(function(r){ return r.min > tp; }).slice(0,3);
+  var totalBadges = dogStats.reduce(function(s,x){ return s+x.earned; }, 0);
+  var totalLogs = dogStats.reduce(function(s,x){ return s+x.totalLogs; }, 0);
+
+  // Multiplier info
+  var multiplier = dogs.length <= 1 ? 2 : dogs.length === 2 ? 1.75 : dogs.length === 3 ? 1.5 : dogs.length === 4 ? 1.25 : 1;
+
+  // Points store items
+  var STORE_ITEMS = [
+    { id:"bandana", name:"Dog Bandana", icon:"🎀", points:1000, category:"Dog", desc:"Stylish dog bandana" },
+    { id:"coupon10", name:"10% Off Coupon", icon:"🎟️", points:1000, category:"Coupon", desc:"10% off pet supplies" },
+    { id:"collar_xs", name:"XS Collar", icon:"🦮", points:2500, category:"Dog", desc:"Small breed collar" },
+    { id:"leash_basic", name:"Basic Leash", icon:"🐕", points:3000, category:"Dog", desc:"Standard 4ft leash" },
+    { id:"collar_sm", name:"SM Collar", icon:"🦮", points:4000, category:"Dog", desc:"Medium breed collar" },
+    { id:"coupon25", name:"25% Off Coupon", icon:"🎟️", points:5000, category:"Coupon", desc:"25% off pet supplies" },
+    { id:"hat", name:"PawTraks Hat", icon:"🧢", points:6500, category:"Human", desc:"PawTraks branded cap" },
+    { id:"collar_lg", name:"LG Collar", icon:"🦮", points:8000, category:"Dog", desc:"Large breed collar" },
+    { id:"tshirt", name:"PawTraks T-Shirt", icon:"👕", points:10000, category:"Human", desc:"PawTraks branded tee" },
+    { id:"leash_retract", name:"Retractable Leash", icon:"🐕", points:12000, category:"Dog", desc:"16ft retractable leash" },
+    { id:"coupon50", name:"50% Off Coupon", icon:"🎟️", points:15000, category:"Coupon", desc:"50% off pet supplies" },
+    { id:"hoodie", name:"PawTraks Hoodie", icon:"🧥", points:20000, category:"Human", desc:"PawTraks branded hoodie" },
+  ];
+
+  var canAfford = STORE_ITEMS.filter(function(i){ return tp >= i.points; }).length;
 
   return (
     <div className="fadeIn" style={{ maxWidth:700,margin:"0 auto" }}>
-      <div style={{ marginBottom:24 }}>
-        <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:4 }}>
-          <svg width="56" height="72" viewBox="0 0 56 72" fill="none" xmlns="http://www.w3.org/2000/svg"
-            style={{ flexShrink:0, filter:"drop-shadow(0 6px 22px rgba(244,162,77,0.7)) drop-shadow(0 2px 6px rgba(0,0,0,0.4))" }}>
-            <defs>
-              {/* Ribbon stripe gradients */}
-              <linearGradient id="hp-r1" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#c0392b"/>
-                <stop offset="50%" stopColor="#e74c3c"/>
-                <stop offset="100%" stopColor="#c0392b"/>
-              </linearGradient>
-              <linearGradient id="hp-r2" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#e8c84a"/>
-                <stop offset="50%" stopColor="#fde68a"/>
-                <stop offset="100%" stopColor="#e8c84a"/>
-              </linearGradient>
-              <linearGradient id="hp-r3" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#1a56c4"/>
-                <stop offset="50%" stopColor="#4a90e2"/>
-                <stop offset="100%" stopColor="#1a56c4"/>
-              </linearGradient>
-              {/* Clasp gradient */}
-              <linearGradient id="hp-clasp" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#fde68a"/>
-                <stop offset="40%" stopColor="#f5c518"/>
-                <stop offset="100%" stopColor="#92650a"/>
-              </linearGradient>
-              {/* Outer rim */}
-              <linearGradient id="hp-rim" x1="0" y1="0" x2="1" y2="1">
-                <stop offset="0%" stopColor="#fff9c4"/>
-                <stop offset="30%" stopColor="#f5c518"/>
-                <stop offset="70%" stopColor="#d4a017"/>
-                <stop offset="100%" stopColor="#7a4f00"/>
-              </linearGradient>
-              {/* Medal face */}
-              <radialGradient id="hp-face" cx="38%" cy="32%" r="68%">
-                <stop offset="0%" stopColor="#fffde0"/>
-                <stop offset="35%" stopColor="#f5c518"/>
-                <stop offset="75%" stopColor="#d4a017"/>
-                <stop offset="100%" stopColor="#92650a"/>
-              </radialGradient>
-              {/* Shine */}
-              <radialGradient id="hp-shine" cx="32%" cy="25%" r="50%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.85)"/>
-                <stop offset="50%" stopColor="rgba(255,255,255,0.12)"/>
-                <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-              </radialGradient>
-              {/* Depth shadow */}
-              <radialGradient id="hp-depth" cx="65%" cy="70%" r="55%">
-                <stop offset="0%" stopColor="rgba(0,0,0,0.32)"/>
-                <stop offset="100%" stopColor="rgba(0,0,0,0)"/>
-              </radialGradient>
-              {/* Paw print engraving */}
-              <radialGradient id="hp-paw" cx="50%" cy="40%" r="60%">
-                <stop offset="0%" stopColor="rgba(255,255,255,0.55)"/>
-                <stop offset="100%" stopColor="rgba(255,220,100,0.18)"/>
-              </radialGradient>
-            </defs>
 
-            {/* ── Ribbon (3-stripe: red / gold / blue) ── */}
-            {/* Left panel */}
-            <rect x="16" y="0" width="5.33" height="30" fill="url(#hp-r1)"/>
-            <rect x="21.33" y="0" width="5.33" height="30" fill="url(#hp-r2)"/>
-            <rect x="26.66" y="0" width="5.33" height="30" fill="url(#hp-r3)"/>
-            {/* Right panel */}
-            <rect x="32" y="0" width="5.33" height="30" fill="url(#hp-r1)"/>
-            <rect x="37.33" y="0" width="5.33" height="30" fill="url(#hp-r2)"/>
-            <rect x="42.66" y="0" width="2.34" height="30" fill="url(#hp-r3)"/>
-            {/* V-notch left */}
-            <polygon points="16,30 29.33,30 22.5,38" fill="url(#hp-r2)"/>
-            {/* V-notch right */}
-            <polygon points="32,30 45,30 38.5,38" fill="url(#hp-r1)"/>
-            {/* Ribbon sheen lines */}
-            <line x1="21.33" y1="1" x2="21.33" y2="29" stroke="rgba(255,255,255,0.25)" strokeWidth="0.7"/>
-            <line x1="26.66" y1="1" x2="26.66" y2="29" stroke="rgba(255,255,255,0.25)" strokeWidth="0.7"/>
-            <line x1="37.33" y1="1" x2="37.33" y2="29" stroke="rgba(255,255,255,0.25)" strokeWidth="0.7"/>
-            <line x1="42.66" y1="1" x2="42.66" y2="29" stroke="rgba(255,255,255,0.25)" strokeWidth="0.7"/>
-
-            {/* ── Clasp bar connecting ribbon to medal ── */}
-            <rect x="17" y="28" width="22" height="5" rx="2.5" fill="url(#hp-clasp)"/>
-            <rect x="18" y="29" width="20" height="1.5" rx="0.75" fill="rgba(255,255,255,0.35)"/>
-
-            {/* ── Medal disc ── */}
-            {/* Outer glow ring */}
-            <circle cx="28" cy="54" r="20" fill="rgba(244,162,77,0.18)"/>
-            {/* Rim */}
-            <circle cx="28" cy="54" r="18.5" fill="url(#hp-rim)"/>
-            {/* Face */}
-            <circle cx="28" cy="54" r="15.5" fill="url(#hp-face)"/>
-            {/* Depth */}
-            <circle cx="28" cy="54" r="15.5" fill="url(#hp-depth)"/>
-            {/* Shine */}
-            <circle cx="28" cy="54" r="15.5" fill="url(#hp-shine)"/>
-
-            {/* ── Paw print engraving ── */}
-            {/* Main pad */}
-            <ellipse cx="28" cy="56.5" rx="4.5" ry="3.8" fill="url(#hp-paw)"/>
-            {/* Toe pads */}
-            <ellipse cx="22.5" cy="52" rx="2.1" ry="1.8" fill="url(#hp-paw)"/>
-            <ellipse cx="26" cy="50.2" rx="2.1" ry="1.8" fill="url(#hp-paw)"/>
-            <ellipse cx="30" cy="50.2" rx="2.1" ry="1.8" fill="url(#hp-paw)"/>
-            <ellipse cx="33.5" cy="52" rx="2.1" ry="1.8" fill="url(#hp-paw)"/>
-
-            {/* ── Inner bezel ring ── */}
-            <circle cx="28" cy="54" r="15.5" fill="none" stroke="rgba(255,255,255,0.22)" strokeWidth="0.8"/>
-            <circle cx="28" cy="54" r="17.8" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="0.6"/>
-          </svg>
-          <h2 style={{ fontFamily:"Fraunces",fontSize:34,fontWeight:800,color:C.text,letterSpacing:"-.5px" }}>Trainer Profile</h2>
-        </div>
-        <p style={{ color:C.text,fontSize:16,fontWeight:500 }}>Your personal rank and progress as a dog caregiver.</p>
+      {/* Header */}
+      <div style={{ marginBottom:20 }}>
+        <h2 style={{ fontFamily:"Fraunces",fontSize:30,fontWeight:800,color:C.text,marginBottom:4 }}>🏆 Trainer Profile</h2>
+        <p style={{ color:C.muted,fontSize:14 }}>Earn points by caring for your dogs. Spend them in the store.</p>
       </div>
 
-      {/* ── Current Rank Card ── */}
-      <div onClick={onShowRankTiers}
-        style={{ background:"linear-gradient(135deg,"+uLvl.glow+" 0%,"+C.card+" 70%)",border:"2px solid "+uLvl.color,borderRadius:20,padding:"22px 24px",marginBottom:14,boxShadow:"0 0 32px "+uLvl.glow,cursor:"pointer",transition:"all .18s" }}
-        onMouseEnter={function(e){ e.currentTarget.style.filter="brightness(1.06)"; }}
-        onMouseLeave={function(e){ e.currentTarget.style.filter=""; }}>
-        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12,flexWrap:"wrap",gap:8 }}>
-          <p style={{ fontSize:13,fontWeight:800,color:uLvl.color,textTransform:"uppercase",letterSpacing:".1em" }}>Your Trainer Rank</p>
-          <span style={{ fontSize:13,color:C.text,fontWeight:700,background:C.border,padding:"4px 12px",borderRadius:99,whiteSpace:"nowrap" }}>{tp+" TP · TAP FOR ALL TIERS ›"}</span>
-        </div>
-        <div style={{ display:"flex",alignItems:"center",gap:14,marginBottom:16,flexWrap:"wrap" }}>
-          <div style={{ fontSize:48,lineHeight:1,filter:"drop-shadow(0 6px 18px "+uLvl.glow+")",flexShrink:0 }}>{uLvl.icon}</div>
-          <div style={{ flex:1,minWidth:0 }}>
-            <p style={{ fontFamily:"Fraunces",fontSize:24,fontWeight:800,color:uLvl.color,lineHeight:1.1,marginBottom:4 }}>{uLvl.label}</p>
-            <p style={{ fontSize:13,color:C.text,fontWeight:500,marginBottom:6 }}>{uLvl.desc}</p>
-            {nxtLvl
-              ? <p style={{ fontSize:13,color:C.text,fontWeight:600 }}>{toNxt+" TP to reach "+nxtLvl.icon+" "+nxtLvl.label}</p>
-              : <p style={{ fontSize:13,color:uLvl.color,fontWeight:700 }}>Highest rank achieved! 👑</p>}
+      {/* Points Balance Card */}
+      <div style={{ background:"linear-gradient(135deg,"+C.accent+" 0%,#d4820a 100%)",borderRadius:20,padding:24,marginBottom:16,color:"#fff" }}>
+        <p style={{ fontSize:13,fontWeight:700,opacity:0.85,marginBottom:4,textTransform:"uppercase",letterSpacing:".1em" }}>Your Balance</p>
+        <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:12 }}>
+          <div>
+            <p style={{ fontFamily:"Fraunces",fontSize:48,fontWeight:900,lineHeight:1 }}>{tp.toLocaleString()}</p>
+            <p style={{ fontSize:15,fontWeight:700,opacity:0.9 }}>Trainer Points</p>
           </div>
-          <div style={{ textAlign:"right",flexShrink:0,minWidth:80 }}>
-            <p style={{ fontFamily:"Fraunces",fontSize:32,fontWeight:800,color:uLvl.color,lineHeight:1 }}>{tp}</p>
-            <p style={{ fontSize:13,color:C.text,fontWeight:700,marginTop:3,whiteSpace:"nowrap" }}>Trainer Points</p>
-          </div>
+          <button onClick={function(){ setShowStore(true); }}
+            style={{ background:"#fff",border:"none",color:C.accent,borderRadius:12,padding:"14px 24px",fontSize:15,fontWeight:800,cursor:"pointer" }}>
+            🛍️ Visit Store {canAfford > 0 ? "("+canAfford+" available)" : ""}
+          </button>
         </div>
-        <div style={{ background:C.border,borderRadius:999,height:12,overflow:"hidden",marginBottom:8 }}>
-          <div style={{ background:"linear-gradient(90deg,"+uLvl.color+",rgba(255,255,255,0.35))",width:pct+"%",height:"100%",borderRadius:999,transition:"width .8s ease",boxShadow:"0 0 10px "+uLvl.glow }} />
-        </div>
-        <div style={{ display:"flex",justifyContent:"space-between" }}>
-          <p style={{ fontSize:14,color:uLvl.color,fontWeight:800 }}>{uLvl.icon+" "+uLvl.label}</p>
-          {nxtLvl && <p style={{ fontSize:14,color:C.text,fontWeight:800 }}>{nxtLvl.icon+" "+nxtLvl.label+" ("+nxtLvl.min+" TP)"}</p>}
+        <p style={{ fontSize:17,fontWeight:700,opacity:0.95,marginTop:10 }}>Current multiplier: {multiplier}x TP per action</p>
+        {canAfford > 0 && (
+          <p style={{ fontSize:14,fontWeight:600,opacity:0.9,marginTop:4 }}>🎉 You can afford {canAfford} item{canAfford !== 1 ? "s" : ""} right now!</p>
+        )}
+      </div>
+
+      {/* Milestones Card */}
+      <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:18,marginBottom:16 }}>
+        <p style={{ fontFamily:"Fraunces",fontSize:17,fontWeight:800,color:C.text,marginBottom:4 }}>🏆 Milestones</p>
+        <p style={{ fontSize:14,color:C.muted,marginBottom:14 }}>Complete these to earn bonus TP automatically.</p>
+        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+          {[
+            { icon:"🍽️", label:"7-Day Feeding Streak", desc:"Feed your dog every day for 7 days (repeats!)", reward:"+100 TP", key:"fed_7" },
+            { icon:"🍽️", label:"30-Day Feeding Streak", desc:"Feed your dog every day for 30 days (repeats!)", reward:"+500 TP", key:"fed_30" },
+            { icon:"🌳", label:"50 Outdoor Trips", desc:"Take your dog outside 50 times", reward:"+300 TP", key:"outside_50" },
+            { icon:"💉", label:"Vaccines Up to Date", desc:"Keep all vaccines current", reward:"+200 TP", key:"vax_uptodate" },
+            { icon:"🩺", label:"First Vet Appointment", desc:"Schedule your first vet visit", reward:"+50 TP", key:"first_vet" },
+            { icon:"🩺", label:"10 Vet Visits Completed", desc:"Complete 10 vet appointments", reward:"+500 TP", key:"vet_10" },
+          ].map(function(m){
+            var milestones = user.milestones || {};
+            // Check if any dog has this milestone completed
+            var completed = Object.keys(milestones).some(function(k){ return k.startsWith(m.key) && milestones[k]; });
+            return (
+              <div key={m.key} style={{ display:"flex",alignItems:"center",gap:12,background:completed?C.accentFaint:C.bg,border:"1px solid "+(completed?C.accent:C.border),borderRadius:12,padding:"12px 14px" }}>
+                <span style={{ fontSize:24,flexShrink:0 }}>{completed ? "✅" : m.icon}</span>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <p style={{ fontSize:14,fontWeight:700,color:completed?C.accent:C.text }}>{m.label}</p>
+                  <p style={{ fontSize:13,color:C.muted }}>{m.desc}</p>
+                </div>
+                <span style={{ fontSize:14,fontWeight:800,color:completed?C.accent:C.muted,flexShrink:0 }}>{completed ? "Earned!" : m.reward}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* ── Stats Row ── */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:14 }}>
+      {/* Quick Stats */}
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16 }}>
         {[
-          { icon:"⚡", label:"Trainer Points", val:tp, color:C.accent, bold:true },
-          { icon:"🏆", label:"Badges Earned", val:totalEarned+" / "+totalPossible, color:C.accent },
-          { icon:"🐕", label:"Dogs in Pack", val:dogs.length, color:C.accent },
+          { icon:"🐕", label:"Dogs", val:dogs.length },
+          { icon:"🏅", label:"Badges", val:totalBadges },
+          { icon:"🔥", label:"Streak", val:streak+"d" },
+          { icon:"👥", label:"Referrals", val:referralCount },
         ].map(function(s){
           return (
-            <div key={s.label} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:"14px 16px",textAlign:"center" }}>
-              <div style={{ fontSize:26,marginBottom:6 }}>{s.icon}</div>
-              <p style={{ fontFamily:"Fraunces",fontSize:s.bold?26:22,fontWeight:900,color:s.color }}>{s.val}</p>
-              <p style={{ fontSize:13,color:C.text,fontWeight:s.bold?900:700,marginTop:4 }}>{s.label}</p>
+            <div key={s.label} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:"12px 8px",textAlign:"center" }}>
+              <div style={{ fontSize:20,marginBottom:4 }}>{s.icon}</div>
+              <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:900,color:C.accent }}>{s.val}</p>
+              <p style={{ fontSize:13,color:C.muted,fontWeight:700 }}>{s.label}</p>
             </div>
           );
         })}
       </div>
 
-      {/* ── Upcoming Tiers ── */}
-      {upcoming.length > 0 && (
-        <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:18,padding:20,marginBottom:14 }}>
-          <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:14 }}>Next Tiers to Unlock</p>
-          {upcoming.map(function(rank, i){
-            var need = rank.min - tp;
-            return (
-              <div key={rank.label} style={{ display:"flex",alignItems:"center",gap:14,padding:"12px 0",borderBottom:i<upcoming.length-1?"1px solid "+C.border:"none" }}>
-                <div style={{ fontSize:32,filter:"grayscale(0.4)",flexShrink:0 }}>{rank.icon}</div>
-                <div style={{ flex:1 }}>
-                  <p style={{ fontFamily:"Fraunces",fontSize:16,fontWeight:800,color:rank.color,marginBottom:2 }}>{rank.label}</p>
-                  <p style={{ fontSize:14,color:C.text,fontWeight:500 }}>{rank.desc}</p>
-                </div>
-                <div style={{ textAlign:"right",flexShrink:0 }}>
-                  <p style={{ fontSize:13,fontWeight:700,color:rank.color }}>{rank.min+" TP"}</p>
-                  <p style={{ fontSize:13,color:C.text,fontWeight:600,marginTop:3 }}>{need+" to go"}</p>
-                </div>
-              </div>
-            );
-          })}
-          <button onClick={onShowRankTiers} style={{ marginTop:14,width:"100%",background:C.accentFaint,border:"1.5px solid "+C.accent,color:C.accent,borderRadius:10,padding:"9px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-            View All 12 Tiers →
-          </button>
+      {/* Referral Code Card */}
+      {referralCode && (
+        <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:16,marginBottom:16 }}>
+          <p style={{ fontSize:13,fontWeight:800,color:C.text,marginBottom:4 }}>🎁 Your Referral Code</p>
+          <p style={{ fontSize:14,color:C.muted,marginBottom:10 }}>Share this code with friends. You earn 250 TP when they sign up!</p>
+          <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+            <div style={{ flex:1,background:C.bg,border:"1.5px solid "+C.accent,borderRadius:10,padding:"12px 16px",fontFamily:"monospace",fontSize:18,fontWeight:800,color:C.accent,letterSpacing:".15em",textAlign:"center" }}>
+              {referralCode}
+            </div>
+            <button onClick={copyReferralCode}
+              style={{ background:copied?C.green:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,transition:"background .2s" }}>
+              {copied ? "✓ Copied!" : "Copy"}
+            </button>
+          </div>
+          {referralCount > 0 && <p style={{ fontSize:12,color:C.accent,fontWeight:700,marginTop:8 }}>🎉 {referralCount} friend{referralCount !== 1 ? "s" : ""} joined using your code!</p>}
         </div>
       )}
 
-      {/* ── How to earn TP ── */}
-      <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:18,padding:20,marginBottom:14 }}>
-        <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:14 }}>How to Earn Trainer Points</p>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-          {[
-            ["🍽️","Mark as Fed","+"+TP_VALUES.fed+" TP","Every meal logged counts."],
-            ["🌿","Taken Outside","+"+TP_VALUES.outside+" TP","Every outing matters."],
-            ["⚖️","Log Weight","+"+TP_VALUES.weight+" TP","Track healthy growth."],
-            ["🩺","Schedule Vet Appt","+"+TP_VALUES.vet_add+" TP","Proactive health care."],
-            ["💉","Log Vaccine","+"+TP_VALUES.vax_add+" TP","Keep records current."],
-            ["💊","Give Medication","+"+TP_VALUES.med_given+" TP","Consistent treatment."],
-            ["🌸","Log Heat Cycle","+"+TP_VALUES.heat_log+" TP","First-time log only."],
-            ["🐕","Add a Dog","+"+TP_VALUES.add_dog+" TP","Grow your pack."],
-          ].map(function(row, i){
+      {/* Tab Bar */}
+      <div style={{ display:"flex",gap:8,marginBottom:16 }}>
+        {["overview","dogs","earn"].map(function(tab){
+          var labels = { overview:"Overview", dogs:"By Dog", earn:"How to Earn" };
+          return (
+            <button key={tab} onClick={function(){ setActiveTab(tab); }}
+              style={{ flex:1,padding:"10px",borderRadius:10,border:"1.5px solid "+(activeTab===tab?C.accent:C.border),background:activeTab===tab?C.accentFaint:C.card,color:activeTab===tab?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer" }}>
+              {labels[tab]}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Overview Tab */}
+      {activeTab === "overview" && (
+        <div>
+          {/* Streak info */}
+          <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:16,marginBottom:14 }}>
+            <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between" }}>
+              <div>
+                <p style={{ fontSize:13,fontWeight:800,color:C.text,marginBottom:2 }}>🔥 Care Streak</p>
+                <p style={{ fontSize:14,color:C.muted }}>Log care for all dogs every day. 7 days = +100 TP bonus!</p>
+              </div>
+              <div style={{ textAlign:"right" }}>
+                <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:streak>0?C.accent:C.muted }}>{streak}</p>
+                <p style={{ fontSize:14,color:C.muted,fontWeight:600 }}>days</p>
+              </div>
+            </div>
+            <div style={{ background:C.border,borderRadius:999,height:8,overflow:"hidden",marginTop:10 }}>
+              <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:Math.min(100,(streak%7)/7*100)+"%",height:"100%",borderRadius:999,transition:"width .5s" }} />
+            </div>
+            <p style={{ fontSize:14,color:C.muted,marginTop:4 }}>{7-(streak%7)} more day{7-(streak%7)!==1?"s":""} until next bonus</p>
+          </div>
+
+          {/* Recent Activity */}
+          {recentLog.length > 0 ? (
+            <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20 }}>
+              <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:12 }}>Recent Activity</p>
+              {recentLog.map(function(entry, i){
+                return (
+                  <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<recentLog.length-1?"1px solid "+C.border:"none" }}>
+                    <p style={{ fontSize:14,fontWeight:600,color:C.text,flex:1,marginRight:8 }}>{entry.reason}</p>
+                    <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
+                      <span style={{ fontSize:14,fontWeight:900,color:C.accent }}>{"+"+(entry.amount)+" TP"}</span>
+                      <span style={{ fontSize:12,fontWeight:600,color:C.muted }}>{timeAgo(entry.ts)}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ textAlign:"center",padding:40,background:C.card,border:"1.5px solid "+C.border,borderRadius:16 }}>
+              <div style={{ fontSize:48,marginBottom:12 }}>🐾</div>
+              <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:700,color:C.text,marginBottom:8 }}>No Activity Yet</p>
+              <p style={{ color:C.muted,fontSize:14 }}>Start logging care for your dogs to earn Trainer Points!</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* By Dog Tab */}
+      {activeTab === "dogs" && (
+        <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+          {dogStats.map(function(ds){
+            var d = ds.dog;
+            var isOpen = openDogId === d.id;
             return (
-              <div key={i} style={{ background:C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10 }}>
-                <span style={{ fontSize:22,flexShrink:0 }}>{row[0]}</span>
-                <div style={{ flex:1,minWidth:0 }}>
-                  <p style={{ fontSize:15,fontWeight:700,color:C.text }}>{row[1]}</p>
-                  <p style={{ fontSize:13,color:C.isDark?"rgba(255,255,255,0.6)":"rgba(0,0,0,0.6)",fontWeight:500 }}>{row[3]}</p>
-                </div>
-                <span style={{ fontSize:15,fontWeight:800,color:C.accent,flexShrink:0 }}>{row[2]}</span>
+              <div key={d.id} style={{ background:C.card,border:"1.5px solid "+(isOpen?C.accent:C.border),borderRadius:16,overflow:"hidden",transition:"border-color .2s" }}>
+                {/* Collapsible Header */}
+                <button onClick={function(){ setOpenDogId(isOpen ? null : d.id); }}
+                  style={{ width:"100%",display:"flex",alignItems:"center",gap:12,padding:16,background:"none",border:"none",cursor:"pointer",textAlign:"left" }}>
+                  <div style={{ width:44,height:44,borderRadius:"50%",overflow:"hidden",border:"2px solid "+(isOpen?C.accent:C.border),flexShrink:0,transition:"border-color .2s" }}>
+                    {d.photo ? <img src={d.photo} alt={d.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : <div style={{ width:"100%",height:"100%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,background:C.bg }}>{d.emoji||"🐕"}</div>}
+                  </div>
+                  <div style={{ flex:1,minWidth:0 }}>
+                    <p style={{ fontFamily:"Fraunces",fontSize:17,fontWeight:800,color:C.text }}>{d.name}</p>
+                    <p style={{ fontSize:14,color:C.muted }}>{d.breed || "Mixed Breed"} · {ds.earned}/{ds.total} badges</p>
+                  </div>
+                  <div style={{ display:"flex",alignItems:"center",gap:10,flexShrink:0 }}>
+                    <div style={{ textAlign:"right" }}>
+                      <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:900,color:C.accent }}>{ds.earned}</p>
+                      <p style={{ fontSize:13,color:C.muted }}>badges</p>
+                    </div>
+                    <span style={{ color:C.muted,fontSize:18,transition:"transform .2s",display:"block",transform:isOpen?"rotate(180deg)":"rotate(0deg)" }}>⌄</span>
+                  </div>
+                </button>
+
+                {/* Expanded Content */}
+                {isOpen && (
+                  <div style={{ padding:"0 16px 16px" }}>
+                    <div style={{ borderTop:"1px solid "+C.border,paddingTop:14,marginBottom:12 }}>
+                      <p style={{ fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:".06em",marginBottom:10 }}>Today</p>
+                      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8,marginBottom:14 }}>
+                        {[
+                          { icon:"🍽️", label:"Fed", val:ds.fedToday },
+                          { icon:"💧", label:"Water", val:ds.waterToday },
+                          { icon:"🌳", label:"Outside", val:ds.outsideToday },
+                        ].map(function(s){
+                          return (
+                            <div key={s.label} style={{ background:C.bg,border:"1px solid "+C.border,borderRadius:10,padding:"10px",textAlign:"center" }}>
+                              <div style={{ fontSize:20,marginBottom:2 }}>{s.icon}</div>
+                              <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:900,color:s.val>0?C.accent:C.muted }}>{s.val}x</p>
+                              <p style={{ fontSize:13,color:C.muted,fontWeight:600 }}>{s.label}</p>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6 }}>
+                        <p style={{ fontSize:13,fontWeight:700,color:C.text }}>Badge Progress</p>
+                        <p style={{ fontSize:13,fontWeight:700,color:C.accent }}>{ds.earned} / {ds.total}</p>
+                      </div>
+                      <div style={{ background:C.border,borderRadius:999,height:8,overflow:"hidden" }}>
+                        <div style={{ background:"linear-gradient(90deg,"+C.accent+","+C.accentGlow+")",width:(ds.total>0?Math.round((ds.earned/ds.total)*100):0)+"%",height:"100%",borderRadius:999,transition:"width .5s" }} />
+                      </div>
+                      <p style={{ fontSize:14,color:C.muted,marginTop:6 }}>Total logs: {ds.totalLogs}</p>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
         </div>
-      </div>
+      )}
 
-      {/* ── Recent TP activity ── */}
-      {recentLog.length > 0 && (
-        <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:18,padding:20 }}>
-          <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:12 }}>Recent Activity</p>
-          {recentLog.map(function(entry, i){
-            return (
-              <div key={i} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 0",borderBottom:i<recentLog.length-1?"1px solid "+C.border:"none" }}>
-                <p style={{ fontSize:15,fontWeight:600,color:C.text }}>{entry.reason}</p>
-                <div style={{ display:"flex",alignItems:"center",gap:8,flexShrink:0 }}>
-                  <span style={{ fontSize:15,fontWeight:900,color:C.accent }}>{"+"+(entry.amount)+" TP"}</span>
-                  <span style={{ fontSize:13,fontWeight:700,color:C.muted }}>{timeAgo(entry.ts)}</span>
-                </div>
-              </div>
-            );
-          })}
+      {/* How to Earn Tab */}
+      {activeTab === "earn" && (
+        <div style={{ display:"flex",flexDirection:"column",gap:12 }}>
+          <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20 }}>
+            <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:14 }}>Actions</p>
+            <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+              {[
+                ["🍽️","Mark as Fed","+"+TP_VALUES.fed+" TP","Every meal logged counts."],
+                ["💧","Gave Water","+"+TP_VALUES.water+" TP","Keep them hydrated."],
+                ["🌿","Taken Outside","+"+TP_VALUES.outside+" TP","Every outing matters."],
+                ["⚖️","Log Weight","+"+TP_VALUES.weight+" TP","Track healthy growth."],
+                ["🩺","Schedule Vet","+"+TP_VALUES.vet_add+" TP","Proactive health care."],
+                ["💉","Log Vaccine","+"+TP_VALUES.vax_add+" TP","Keep records current."],
+                ["💊","Give Medication","+"+TP_VALUES.med_given+" TP","Consistent treatment."],
+                ["🐕","Add a Dog","+"+TP_VALUES.add_dog+" TP","Grow your pack."],
+              ].map(function(row, i){
+                return (
+                  <div key={i} style={{ background:C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10 }}>
+                    <span style={{ fontSize:22,flexShrink:0 }}>{row[0]}</span>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontSize:14,fontWeight:700,color:C.text }}>{row[1]}</p>
+                      <p style={{ fontSize:14,color:C.muted,fontWeight:500 }}>{row[3]}</p>
+                    </div>
+                    <span style={{ fontSize:13,fontWeight:800,color:C.accent,flexShrink:0 }}>{row[2]}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:20 }}>
+            <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".08em",marginBottom:14 }}>Bonuses & Milestones</p>
+            <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+              {[
+                ["⚡","Dog Count Multiplier","1 dog = 2x TP · 2 dogs = 1.75x · 3 dogs = 1.5x · 4 dogs = 1.25x · 5+ = 1x"],
+                ["🔥","Weekly Streak","Log care every day for 7 days = +100 TP"],
+                ["🏆","7-Day Feeding Streak","Fed your dog every day for 7 days = +100 TP (repeats every 7 days)"],
+                ["🏆","30-Day Feeding Streak","Fed your dog every day for 30 days = +500 TP (repeats, resets if missed)"],
+                ["🏆","50 Outdoor Trips","Taken outside 50 times = +300 TP"],
+                ["🏆","Vaccines Up to Date","All vaccines current = +200 TP"],
+                ["🏆","First Vet Appointment","Schedule your first vet visit = +50 TP"],
+                ["🏆","10 Vet Visits Completed","Complete 10 vet appointments = +500 TP"],
+                ["🎁","Referral Bonus","Friend signs up with your code = +250 TP"],
+              ].map(function(row, i){
+                return (
+                  <div key={i} style={{ background:C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10 }}>
+                    <span style={{ fontSize:22,flexShrink:0 }}>{row[0]}</span>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontSize:14,fontWeight:700,color:C.text }}>{row[1]}</p>
+                      <p style={{ fontSize:14,color:C.muted }}>{row[2]}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Points Store Modal */}
+      {showStore && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto" }}
+          onClick={function(){ setShowStore(false); }}>
+          <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.accent,borderRadius:20,padding:20,maxWidth:500,width:"100%" }}
+            onClick={function(e){ e.stopPropagation(); }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+              <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.accent }}>🛍️ Points Store</h2>
+              <button onClick={function(){ setShowStore(false); }}
+                style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer" }}>✕</button>
+            </div>
+            <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:12,padding:12,marginBottom:16,textAlign:"center" }}>
+              <p style={{ fontSize:13,color:C.muted,fontWeight:600 }}>Your Balance</p>
+              <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:C.accent }}>{tp.toLocaleString()} TP</p>
+            </div>
+            <p style={{ fontSize:13,color:C.muted,marginBottom:16,textAlign:"center" }}>🚧 Store coming soon! Earn points now and spend them when we launch.</p>
+            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+              {STORE_ITEMS.map(function(item){
+                var affordable = tp >= item.points;
+                return (
+                  <div key={item.id} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+(affordable?C.accent:C.border),borderRadius:12,padding:12,opacity:affordable?1:0.6 }}>
+                    <div style={{ fontSize:32,flexShrink:0 }}>{item.icon}</div>
+                    <div style={{ flex:1 }}>
+                      <p style={{ fontWeight:700,fontSize:14,color:C.text }}>{item.name}</p>
+                      <p style={{ fontSize:14,color:C.muted }}>{item.desc} · {item.category}</p>
+                    </div>
+                    <div style={{ textAlign:"right",flexShrink:0 }}>
+                      <p style={{ fontWeight:800,fontSize:14,color:affordable?C.accent:C.muted }}>{item.points.toLocaleString()} TP</p>
+                      {affordable && <p style={{ fontSize:11,color:C.accent,fontWeight:700 }}>✓ Affordable</p>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ fontSize:14,color:C.muted,textAlign:"center",marginTop:16,lineHeight:1.5 }}>Items will be available to redeem when the store officially launches. Keep earning!</p>
+          </div>
         </div>
       )}
     </div>
   );
 }
+
+
+function TutorialModal({ onClose, userName }) {
+  var C = useTheme();
+  var [step, setStep] = useState(0);
+  var [animating, setAnimating] = useState(false);
+
+  var steps = [
+    {
+      mascotMood: "wave",
+      title: "Hey " + (userName ? userName.split(" ")[0] : "there") + "! 👋",
+      subtitle: "Welcome to PawTraks!",
+      body: "I'm Broly, your PawTraks guide! I'll walk you through everything you need to know to keep your pups happy and healthy. Ready? Let's go! 🐾",
+      tip: null,
+      color: "#f4a24d"
+    },
+    {
+      mascotMood: "happy",
+      title: "Add Your Dog 🐕",
+      subtitle: "Start by building your pack",
+      body: "Tap the big + button at the bottom of the screen to add your first dog. You can add their name, breed, birthday, photo and more. Don't worry — you can always edit it later!",
+      tip: "💡 PawTraks supports up to 100 dogs!",
+      color: "#f4a24d"
+    },
+    {
+      mascotMood: "eating",
+      title: "Daily Care 🍽️💧🌳",
+      subtitle: "Track food, water & outdoor time",
+      body: "Every dog profile has three quick-log buttons — Fed, Water, and Outside. Tap them whenever you care for your dog. PawTraks tracks cooldown times based on your dog's age so you always know when they're due next.",
+      tip: "💡 Puppies need care every 30 minutes — adults every 8 hours!",
+      color: "#34a853"
+    },
+    {
+      mascotMood: "alert",
+      title: "Action Required ⚠️",
+      subtitle: "Never miss a care reminder",
+      body: "When a dog needs food, water, or to go outside, they'll show up in the Action Required box on your board. You can tap to log care right from there — no need to go into each dog's profile.",
+      tip: "💡 Tap the dog's name in the alert to go straight to their profile.",
+      color: "#f59e0b"
+    },
+    {
+      mascotMood: "happy",
+      title: "Health Records 🩺",
+      subtitle: "Vet visits, vaccines & more",
+      body: "Each dog has a full health section where you can track vet appointments, vaccinations, medications, weight history, and heat cycles. PawTraks will alert you when something is coming up or overdue.",
+      tip: "💡 You earn Trainer Points for logging health records!",
+      color: "#60a5fa"
+    },
+    {
+      mascotMood: "camera",
+      title: "Documents 📸",
+      subtitle: "Store important photos",
+      body: "Go to any dog's profile and tap Manage Documents to upload photos of important documents — vet records, vaccination certificates, registration papers, and more. Photos are stored securely in the cloud.",
+      tip: "💡 Each dog has 30MB of free cloud storage.",
+      color: "#8b5cf6"
+    },
+    {
+      mascotMood: "trophy",
+      title: "Trainer Points 🏆",
+      subtitle: "Earn points, get rewards",
+      body: "Every time you log care for your dogs you earn Trainer Points. Log food, water, outside trips, vet visits, vaccines and more — it all adds up! Save your points and spend them in the store on collars, leashes, PawTraks merch and more.",
+      tip: "💡 Earn bonus TP with 7-day streaks, milestones, and referrals!",
+      color: "#f4a24d"
+    },
+    {
+      mascotMood: "trophy",
+      title: "The Multiplier ⚡",
+      subtitle: "Fewer dogs = bigger bonus",
+      body: "Here's the secret — the fewer dogs you have, the more TP you earn per action! With 1 dog you get a 2x multiplier, meaning every action earns double points. With 2 dogs it's 1.75x, 3 dogs is 1.5x, 4 dogs is 1.25x, and 5 or more is the base rate. This keeps things fair for everyone no matter how big your pack is!",
+      tip: "💡 Check your current multiplier anytime on the Trainer Profile screen.",
+      color: "#f4a24d"
+    },
+    {
+      mascotMood: "bell",
+      title: "Push Notifications 🔔",
+      subtitle: "Stay on top of care reminders",
+      body: "PawTraks can send you push notifications when your dogs need food, water, or to go outside — even when the app is closed! Make sure notifications are turned on in your profile settings.",
+      tip: "💡 Notifications repeat every 30 minutes until you log the action.",
+      color: "#34a853"
+    },
+    {
+      mascotMood: "done",
+      title: "You're all set! 🎉",
+      subtitle: "Go take care of your pups!",
+      body: "That's everything you need to know to get started. If you ever want to see this tutorial again, just tap Help in your profile. Now go give your dogs some love! 🐾",
+      tip: null,
+      color: "#f4a24d"
+    }
+  ];
+
+  var current = steps[step];
+  var isLast = step === steps.length - 1;
+
+  function goNext() {
+    if (animating) return;
+    if (isLast) { onClose(); return; }
+    setAnimating(true);
+    setTimeout(function(){ setStep(function(s){ return s + 1; }); setAnimating(false); }, 200);
+  }
+
+  function goPrev() {
+    if (animating || step === 0) return;
+    setAnimating(true);
+    setTimeout(function(){ setStep(function(s){ return s - 1; }); setAnimating(false); }, 200);
+  }
+
+  // Dog mascot SVG based on mood
+  function Mascot({ mood, color }) {
+    var isHappy = mood === "done" || mood === "happy" || mood === "wave";
+    var isAlert = mood === "alert";
+    var isEating = mood === "eating";
+
+    return (
+      <svg width="110" height="110" viewBox="0 0 110 110" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="bodyG" cx="38%" cy="30%" r="70%">
+            <stop offset="0%" stopColor="#f0a830"/>
+            <stop offset="100%" stopColor="#c47018"/>
+          </radialGradient>
+          <radialGradient id="headG" cx="40%" cy="28%" r="68%">
+            <stop offset="0%" stopColor="#f5b840"/>
+            <stop offset="100%" stopColor="#c47018"/>
+          </radialGradient>
+          <radialGradient id="chestG" cx="50%" cy="30%" r="60%">
+            <stop offset="0%" stopColor="#feecc0"/>
+            <stop offset="100%" stopColor="#f5d080"/>
+          </radialGradient>
+          <radialGradient id="earInG" cx="50%" cy="30%" r="60%">
+            <stop offset="0%" stopColor="#f08040"/>
+            <stop offset="100%" stopColor="#c05010"/>
+          </radialGradient>
+        </defs>
+
+        {/* Ground shadow */}
+        <ellipse cx="55" cy="107" rx="26" ry="4" fill="rgba(0,0,0,0.1)"/>
+
+        {/* Body */}
+        <ellipse cx="55" cy="80" rx="22" ry="18" fill="url(#bodyG)"/>
+        <ellipse cx="55" cy="82" rx="12" ry="13" fill="url(#chestG)"/>
+
+        {/* Tail curled upward */}
+        <path d="M74 72 Q90 55 82 42 Q78 36 74 42 Q80 52 68 64 Z" fill="url(#bodyG)"/>
+        <ellipse cx="79" cy="42" rx="5" ry="4" fill="#feecc0" transform="rotate(-20 79 42)"/>
+
+        {/* Legs */}
+        <rect x="36" y="92" width="10" height="13" rx="5" fill="url(#bodyG)"/>
+        <rect x="64" y="92" width="10" height="13" rx="5" fill="url(#bodyG)"/>
+        <ellipse cx="41" cy="105" rx="5" ry="3.5" fill="#c47018" opacity="0.6"/>
+        <ellipse cx="69" cy="105" rx="5" ry="3.5" fill="#c47018" opacity="0.6"/>
+
+        {/* Neck */}
+        <ellipse cx="55" cy="65" rx="14" ry="7" fill="url(#bodyG)"/>
+
+        {/* Ears — floppy ears, bigger and higher */}
+        {/* Left ear */}
+        <path d="M30 30 Q18 26 14 38 Q10 50 18 58 Q26 64 34 54 Q38 46 30 30 Z" fill="url(#bodyG)"/>
+        <path d="M30 33 Q20 29 17 39 Q14 50 20 56 Q27 61 33 53 Q36 46 30 33 Z" fill="url(#earInG)" opacity="0.55"/>
+        {/* Right ear */}
+        <path d="M80 30 Q92 26 96 38 Q100 50 92 58 Q84 64 76 54 Q72 46 80 30 Z" fill="url(#bodyG)"/>
+        <path d="M80 33 Q90 29 93 39 Q96 50 90 56 Q83 61 77 53 Q74 46 80 33 Z" fill="url(#earInG)" opacity="0.55"/>
+
+        {/* Head */}
+        <circle cx="55" cy="48" r="26" fill="url(#headG)"/>
+        <ellipse cx="47" cy="34" rx="9" ry="6" fill="rgba(255,255,255,0.15)" transform="rotate(-25 47 34)"/>
+        <ellipse cx="55" cy="38" rx="8" ry="6" fill="#feecc0" opacity="0.5"/>
+
+        {/* Muzzle */}
+        <ellipse cx="55" cy="56" rx="14" ry="10" fill="url(#chestG)"/>
+
+        {/* Nose */}
+        <ellipse cx="55" cy="50" rx="5.5" ry="4" fill="#1a0a00"/>
+        <ellipse cx="53" cy="49" rx="2" ry="1.4" fill="rgba(255,255,255,0.35)"/>
+
+        {/* Eyes */}
+        {isAlert ? (
+          <>
+            <circle cx="45" cy="43" r="6" fill="white"/>
+            <circle cx="65" cy="43" r="6" fill="white"/>
+            <circle cx="45" cy="43" r="4" fill="#1a0a00"/>
+            <circle cx="65" cy="43" r="4" fill="#1a0a00"/>
+            <circle cx="46.5" cy="41.5" r="1.8" fill="white"/>
+            <circle cx="66.5" cy="41.5" r="1.8" fill="white"/>
+          </>
+        ) : (
+          <>
+            <circle cx="45" cy="43" r="7" fill="white"/>
+            <circle cx="65" cy="43" r="7" fill="white"/>
+            <circle cx="45" cy="43" r="5" fill="#1a0a00"/>
+            <circle cx="65" cy="43" r="5" fill="#1a0a00"/>
+            <circle cx="43" cy="41" r="2" fill="white"/>
+            <circle cx="63" cy="41" r="2" fill="white"/>
+            {isHappy && <>
+              <ellipse cx="39" cy="49" rx="5" ry="3.5" fill="#ff8080" opacity="0.3"/>
+              <ellipse cx="71" cy="49" rx="5" ry="3.5" fill="#ff8080" opacity="0.3"/>
+            </>}
+          </>
+        )}
+
+        {/* Mouth */}
+        {isEating ? (
+          <>
+            <path d="M48 60 Q55 67 62 60" stroke="#1a0a00" strokeWidth="2.2" fill="#c94040" strokeLinecap="round"/>
+            <ellipse cx="55" cy="65" rx="4.5" ry="4" fill="#e05050"/>
+            <path d="M51 65 Q55 70 59 65" stroke="#c03030" strokeWidth="1" fill="none"/>
+          </>
+        ) : isHappy ? (
+          <>
+            <path d="M48 60 Q55 66 62 60" stroke="#1a0a00" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+            <ellipse cx="55" cy="63" rx="4" ry="3.5" fill="#e05050"/>
+          </>
+        ) : (
+          <path d="M49 60 Q55 65 61 60" stroke="#1a0a00" strokeWidth="2.2" fill="none" strokeLinecap="round"/>
+        )}
+
+        {/* Collar */}
+        <rect x="41" y="70" width="28" height="7" rx="3.5" fill={color} opacity="0.9"/>
+        <circle cx="55" cy="73.5" r="3" fill="#ffd700"/>
+        <circle cx="55" cy="73.5" r="1.5" fill="#c8a000"/>
+
+        {/* Accessories */}
+        {mood === "trophy" && <text x="55" y="15" textAnchor="middle" fontSize="16">🏆</text>}
+        {mood === "bell" && <text x="55" y="15" textAnchor="middle" fontSize="16">🔔</text>}
+        {mood === "camera" && <text x="55" y="15" textAnchor="middle" fontSize="16">📸</text>}
+        {mood === "done" && <text x="55" y="15" textAnchor="middle" fontSize="16">🎉</text>}
+      </svg>
+    );
+  }
+
+
+
+  return (
+    <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:999999,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
+      <div className="fadeIn" style={{
+        background:C.card,
+        borderRadius:24,
+        padding:28,
+        maxWidth:420,
+        width:"100%",
+        border:"2px solid "+current.color,
+        boxShadow:"0 0 40px "+current.color+"55",
+        transition:"border-color .3s, box-shadow .3s",
+        opacity: animating ? 0 : 1,
+        transform: animating ? "scale(0.97)" : "scale(1)",
+        transition: "opacity .2s, transform .2s"
+      }}>
+        {/* Progress dots */}
+        <div style={{ display:"flex",justifyContent:"center",gap:6,marginBottom:20 }}>
+          {steps.map(function(_, i){
+            return (
+              <div key={i} onClick={function(){ setStep(i); }}
+                style={{ width:i===step?24:8,height:8,borderRadius:99,background:i===step?current.color:C.border,transition:"all .3s",cursor:"pointer" }} />
+            );
+          })}
+        </div>
+
+        {/* Mascot */}
+        <div style={{ display:"flex",justifyContent:"center",marginBottom:16 }}>
+          <div style={{ 
+            background:"linear-gradient(135deg,"+current.color+"22,"+current.color+"44)",
+            borderRadius:"50%",
+            width:140,
+            height:140,
+            display:"flex",
+            alignItems:"center",
+            justifyContent:"center",
+            border:"3px solid "+current.color+"66",
+            animation:"bounce 2s ease-in-out infinite"
+          }}>
+            <Mascot mood={current.mascotMood} color={current.color} />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div style={{ textAlign:"center",marginBottom:24 }}>
+          <p style={{ fontSize:13,fontWeight:700,color:current.color,textTransform:"uppercase",letterSpacing:".1em",marginBottom:6 }}>{current.subtitle}</p>
+          <h2 style={{ fontFamily:"Fraunces",fontSize:26,fontWeight:900,color:C.text,marginBottom:12,lineHeight:1.2 }}>{current.title}</h2>
+          <p style={{ fontSize:16,color:C.text,lineHeight:1.6,fontWeight:500 }}>{current.body}</p>
+          {current.tip && (
+            <div style={{ background:current.color+"22",border:"1px solid "+current.color+"44",borderRadius:10,padding:"10px 14px",marginTop:14 }}>
+              <p style={{ fontSize:14,color:current.color,fontWeight:700 }}>{current.tip}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Navigation */}
+        <div style={{ display:"flex",gap:10 }}>
+          {step > 0 && (
+            <button onClick={goPrev}
+              style={{ flex:1,background:C.bg,border:"1.5px solid "+C.border,color:C.text,borderRadius:12,padding:"14px",fontSize:15,fontWeight:700,cursor:"pointer" }}>
+              ← Back
+            </button>
+          )}
+          <button onClick={goNext}
+            style={{ flex:2,background:current.color,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:15,fontWeight:800,cursor:"pointer",transition:"all .2s" }}
+            onMouseEnter={function(e){ e.currentTarget.style.filter="brightness(1.1)"; }}
+            onMouseLeave={function(e){ e.currentTarget.style.filter=""; }}>
+            {isLast ? "Let's Go! 🐾" : "Next →"}
+          </button>
+        </div>
+
+        {/* Skip */}
+        {!isLast && (
+          <button onClick={onClose}
+            style={{ width:"100%",background:"none",border:"none",color:C.muted,fontSize:13,fontWeight:600,cursor:"pointer",marginTop:12,padding:4 }}>
+            Skip tutorial
+          </button>
+        )}
+      </div>
+
+      <style>{`
+        @keyframes bounce {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-8px); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 
 // main dashboard
 function DogAlertGroup({ dog, alerts, C, onSelect, setActiveTab, onUpdate, earnTP, setCooldownAlert, dismissAlert, dismissGroup }) {
@@ -5364,7 +5861,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
   var [showPackDocs, setShowPackDocs] = useState(false);
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
   var needsFeed = dogs.filter(function(d){ return !d.lastFed || (Date.now()-new Date(d.lastFed)) > getFedCooldown(d); });
-  var needsWater = dogs.filter(function(d){ return !d.lastWater || (Date.now()-new Date(d.lastWater)) > getFedCooldown(d); });
+  var needsWater = dogs.filter(function(d){ return !d.lastWater || (Date.now()-new Date(d.lastWater)) > getWaterCooldown(d); });
   var needsOut = dogs.filter(function(d){ return !d.lastOutside || (Date.now()-new Date(d.lastOutside)) > getOutsideCooldown(d); });
   var heatAlert = dogs.filter(function(d){ if(d.gender!=="female"||!d.lastHeatDate)return false; var h=getHeatStatus(d); return h&&(h.upcoming||h.inHeat); });
   var ovVaxDogs = dogs.filter(function(d){ return (d.vaccines||[]).some(function(v){ return v.nextDate&&isOverdue(v.nextDate); }); });
@@ -6673,6 +7170,8 @@ export default function PawTraks() {
   var [search, setSearch] = useState("");
   var [showSearch, setShowSearch] = useState(false);
   var [showProfile, setShowProfile] = useState(false);
+  var [showTutorial, setShowTutorial] = useState(false);
+  var [showFamily, setShowFamily] = useState(false);
   var [showRankTiers, setShowRankTiers] = useState(false);
   var [showWelcome, setShowWelcome] = useState(false);
   var [showEditDog, setShowEditDog] = useState(false);
@@ -6686,8 +7185,7 @@ export default function PawTraks() {
   var [showMobileMenu, setShowMobileMenu] = useState(false);
   var [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   var isMobile = useIsMobile();
-
-  // Ensure proper mobile viewport scaling
+  var isFamilyMember = !!(user && user.familyOf);
   useEffect(function() {
     var existing = document.querySelector('meta[name="viewport"]');
     if (!existing) {
@@ -6796,7 +7294,9 @@ export default function PawTraks() {
   var persist = useCallback(function(list) {
     if (!user) return;
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    all[user.email] = Object.assign({}, all[user.email], { dogs: list });
+    // If family member, save dogs back to the owner's account
+    var saveEmail = user.familyOf || user.email;
+    all[saveEmail] = Object.assign({}, all[saveEmail], { dogs: list });
     localStorage.setItem("pt_users", JSON.stringify(all));
     setDogs(list);
   }, [user]);
@@ -6809,15 +7309,176 @@ export default function PawTraks() {
     setUser(updated);
   }
 
+  function getTPMultiplier(dogCount) {
+    if (dogCount <= 1) return 2;
+    if (dogCount === 2) return 1.75;
+    if (dogCount === 3) return 1.5;
+    if (dogCount === 4) return 1.25;
+    return 1;
+  }
+
   function earnTP(amount, reason) {
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var cur = all[user.email] || {};
-    var newTP = (cur.trainerPoints || 0) + amount;
-    var newLog = (cur.tpLog || []).concat([{ amount: amount, reason: reason, ts: new Date().toISOString() }]).slice(-200);
+    var dogCount = (cur.dogs || []).length;
+    var multiplier = getTPMultiplier(dogCount);
+    var finalAmount = Math.round(amount * multiplier * 10) / 10; // keep one decimal place
+    var newTP = (cur.trainerPoints || 0) + finalAmount;
+    var newLog = (cur.tpLog || []).concat([{ amount: finalAmount, reason: reason + (multiplier > 1 ? " ("+multiplier+"x bonus)" : ""), ts: new Date().toISOString() }]).slice(-200);
     var updates = { trainerPoints: newTP, tpLog: newLog };
+
+    // Check milestones after earning
+    var milestones = cur.milestones || {};
+    var milestoneBonus = 0;
+    var milestoneLog = [];
+
+    // Milestone: First vet appointment
+    if (!milestones.first_vet && reason.includes("Scheduled vet")) {
+      milestones.first_vet = true;
+      milestoneBonus += 50;
+      milestoneLog.push({ amount: 50, reason: "🏆 Milestone: First vet appointment!", ts: new Date().toISOString() });
+    }
+
+    updates.milestones = milestones;
+
+    if (milestoneBonus > 0) {
+      updates.trainerPoints = newTP + milestoneBonus;
+      updates.tpLog = newLog.concat(milestoneLog).slice(-200);
+    }
+
     all[user.email] = Object.assign({}, cur, updates);
     localStorage.setItem("pt_users", JSON.stringify(all));
     setUser(function(u){ return Object.assign({}, u, updates); });
+
+    // Check weekly streak and other milestones after update
+    checkStreakBonus(all, user.email);
+    checkMilestones(all, user.email, cur.dogs || []);
+  }
+
+  function checkStreakBonus(all, email) {
+    var cur = all[email] || {};
+    var streak = cur.careStreak || { days: 0, lastChecked: null, bonusClaimed: [] };
+    var today = new Date().toDateString();
+    if (streak.lastChecked === today) return; // already checked today
+
+    var dogs = cur.dogs || [];
+    if (dogs.length === 0) return;
+
+    // Check if all dogs were cared for yesterday
+    var yesterday = new Date(Date.now() - 86400000).toDateString();
+    var allCaredYesterday = dogs.every(function(d) {
+      var log = d.activityLog || [];
+      return log.some(function(e) { return new Date(e.timestamp).toDateString() === yesterday; });
+    });
+
+    if (allCaredYesterday) {
+      streak.days = (streak.days || 0) + 1;
+    } else {
+      streak.days = 0;
+    }
+    streak.lastChecked = today;
+
+    // Award weekly streak bonus
+    if (streak.days > 0 && streak.days % 7 === 0) {
+      var weekNum = Math.floor(streak.days / 7);
+      var bonusKey = "week_" + weekNum;
+      if (!(streak.bonusClaimed || []).includes(bonusKey)) {
+        var bonus = 100;
+        cur.trainerPoints = (cur.trainerPoints || 0) + bonus;
+        cur.tpLog = (cur.tpLog || []).concat([{ amount: bonus, reason: "🔥 " + streak.days + "-day care streak bonus!", ts: new Date().toISOString() }]).slice(-200);
+        streak.bonusClaimed = (streak.bonusClaimed || []).concat([bonusKey]);
+      }
+    }
+
+    cur.careStreak = streak;
+    all[email] = cur;
+    localStorage.setItem("pt_users", JSON.stringify(all));
+    setUser(function(u){ return Object.assign({}, u, { trainerPoints: cur.trainerPoints, tpLog: cur.tpLog, careStreak: streak }); });
+  }
+
+  function checkMilestones(all, email, dogs) {
+    var cur = all[email] || {};
+    var milestones = cur.milestones || {};
+    var bonuses = [];
+
+    dogs.forEach(function(d) {
+      var log = d.activityLog || [];
+      var fedLogs = log.filter(function(e){ return e.type === "fed"; });
+      var outsideLogs = log.filter(function(e){ return e.type === "outside"; });
+
+      // Check 7-day fed streak = +100 TP (repeatable — breaks if user misses a day)
+      var fedStreak = getFedStreak(log);
+      var fed7Completions = Math.floor(fedStreak / 7);
+      var lastFed7Count = milestones["fed_7_count_" + d.id] || 0;
+      if (fed7Completions > lastFed7Count) {
+        milestones["fed_7_count_" + d.id] = fed7Completions;
+        bonuses.push({ amount: 100, reason: "🏆 Milestone: Fed " + d.name + " 7 days straight!" });
+      }
+      // Reset count if streak broke (current streak < last recorded threshold)
+      if (fedStreak < lastFed7Count * 7) {
+        milestones["fed_7_count_" + d.id] = Math.floor(fedStreak / 7);
+      }
+
+      // Check 30-day fed streak = +500 TP (repeatable — breaks if user misses a day)
+      var fed30Completions = Math.floor(fedStreak / 30);
+      var lastFed30Count = milestones["fed_30_count_" + d.id] || 0;
+      if (fed30Completions > lastFed30Count) {
+        milestones["fed_30_count_" + d.id] = fed30Completions;
+        bonuses.push({ amount: 500, reason: "🏆 Milestone: Fed " + d.name + " 30 days straight!" });
+      }
+      // Reset count if streak broke
+      if (fedStreak < lastFed30Count * 30) {
+        milestones["fed_30_count_" + d.id] = Math.floor(fedStreak / 30);
+      }
+
+      // Check 50 outside logs = +300 TP
+      if (!milestones["outside_50_" + d.id] && outsideLogs.length >= 50) {
+        milestones["outside_50_" + d.id] = true;
+        bonuses.push({ amount: 300, reason: "🏆 Milestone: Took " + d.name + " outside 50 times!" });
+      }
+
+      // Check all vaccines up to date = +200 TP
+      if (!milestones["vax_uptodate_" + d.id]) {
+        var vax = d.vaccines || [];
+        if (vax.length > 0 && vax.every(function(v){ return !v.nextDate || new Date(v.nextDate) > new Date(); })) {
+          milestones["vax_uptodate_" + d.id] = true;
+          bonuses.push({ amount: 200, reason: "🏆 Milestone: " + d.name + "'s vaccines are all up to date!" });
+        }
+      }
+
+      // Check 10 completed vet appointments = +500 TP
+      if (!milestones["vet_10_" + d.id]) {
+        var completedVets = (d.vetAppointments || []).filter(function(a){ return a.completed; });
+        if (completedVets.length >= 10) {
+          milestones["vet_10_" + d.id] = true;
+          bonuses.push({ amount: 500, reason: "🏆 Milestone: 10 completed vet visits for " + d.name + "!" });
+        }
+      }
+    });
+
+    if (bonuses.length > 0) {
+      var totalBonus = bonuses.reduce(function(s, b){ return s + b.amount; }, 0);
+      cur.trainerPoints = (cur.trainerPoints || 0) + totalBonus;
+      cur.tpLog = (cur.tpLog || []).concat(bonuses.map(function(b){ return Object.assign({}, b, { ts: new Date().toISOString() }); })).slice(-200);
+      cur.milestones = milestones;
+      all[email] = cur;
+      localStorage.setItem("pt_users", JSON.stringify(all));
+      setUser(function(u){ return Object.assign({}, u, { trainerPoints: cur.trainerPoints, tpLog: cur.tpLog, milestones: milestones }); });
+    }
+  }
+
+  function getFedStreak(log) {
+    var fedDays = {};
+    log.filter(function(e){ return e.type === "fed"; }).forEach(function(e){
+      fedDays[new Date(e.timestamp).toDateString()] = true;
+    });
+    var streak = 0;
+    var d = new Date();
+    while (fedDays[d.toDateString()]) {
+      streak++;
+      d.setDate(d.getDate() - 1);
+    }
+    return streak;
   }
 
   function sendNotification(title, body, icon) {
@@ -6899,15 +7560,24 @@ export default function PawTraks() {
     var sessionEntry = { loginAt: new Date().toISOString(), logoutAt: null, duration: null };
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
     allUsers[u.email] = Object.assign({}, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
-    localStorage.setItem("pt_users", JSON.stringify(allUsers));
+
+    // If this is a family member, load the owner's dogs
     var updatedUser = Object.assign({}, u, { sessions: sessions, lastLoginAt: new Date().toISOString() });
-    setUser(updatedUser); setDogs(updatedUser.dogs||[]);
-    // Store permanent session - only cleared on manual sign out
-    localStorage.setItem("pt_session", JSON.stringify({
-      email: u.email,
-      loginAt: sessionEntry.loginAt
-    }));
+    if (u.familyOf) {
+      var owner = allUsers[u.familyOf];
+      if (owner) {
+        updatedUser.familyDogs = owner.dogs || [];
+        updatedUser.familyOwnerName = owner.name;
+      }
+    }
+
+    localStorage.setItem("pt_users", JSON.stringify(allUsers));
+    setUser(updatedUser); setDogs(u.familyOf ? (updatedUser.familyDogs || []) : (updatedUser.dogs || []));
+    localStorage.setItem("pt_session", JSON.stringify({ email: u.email, loginAt: sessionEntry.loginAt }));
     setShowWelcome(true);
+    if (!u.tutorialDone) {
+      setTimeout(function(){ setShowTutorial(true); }, 800);
+    }
     requestNotifPermission(u.email, updatedUser.dogs || []);
   }
   function logout() {
@@ -7261,6 +7931,12 @@ export default function PawTraks() {
             {/* Board screen */}
             {!activeDog && mobileNav === "board" && (
               <div className="fadeIn" style={{ padding:14 }}>
+                {isFamilyMember && (
+                  <div style={{ background:"#fef3c7",border:"1.5px solid #f59e0b",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10 }}>
+                    <span style={{ fontSize:18 }}>👨‍👩‍👧</span>
+                    <p style={{ fontSize:13,fontWeight:600,color:"#92400e" }}>Viewing {user.familyOwnerName || "family"}'s account — you can log care but cannot edit dogs or health records.</p>
+                  </div>
+                )}
                 <DogBoard dogs={dogs} onSelect={function(d){ setActiveDog(d); setMobileNav("dogs"); }} onUpdate={updateDog} onAdd={function(){ setShowAdd(true); }} earnTP={earnTP} setActiveTab={setActiveTab} setCooldownAlert={setCooldownAlert} />
               </div>
             )}
@@ -7292,7 +7968,7 @@ export default function PawTraks() {
               ].map(function(item) {
                 if (item.special) {
                   return (
-                    <button key="add" onClick={function(){ setShowAdd(true); }}
+                    <button key="add" onClick={function(){ if(isFamilyMember){alert("Family members cannot add dogs.");return;} setShowAdd(true); }}
                       style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer",WebkitTapHighlightColor:"transparent" }}>
                       <div style={{ width:44,height:44,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:26,fontWeight:300,lineHeight:1,marginBottom:0,boxShadow:"0 4px 16px "+C.accentGlow,transform:"translateY(-8px)" }}>＋</div>
                     </button>
@@ -7598,6 +8274,107 @@ export default function PawTraks() {
         </div>
       )}
 
+
+      {showFamily && (function(){
+        var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
+        var myFamily = user.family || [];
+        var familyCode = user.familyCode || (user.name || "").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-3);
+
+        if (!user.familyCode) {
+          var all2 = JSON.parse(localStorage.getItem("pt_users") || "{}");
+          if (all2[user.email]) { all2[user.email].familyCode = familyCode; localStorage.setItem("pt_users", JSON.stringify(all2)); }
+        }
+
+        function removeMember(email) {
+          var all3 = JSON.parse(localStorage.getItem("pt_users") || "{}");
+          var newFamily = myFamily.filter(function(m){ return m.email !== email; });
+          if (all3[user.email]) { all3[user.email].family = newFamily; }
+          if (all3[email]) { delete all3[email].familyOf; }
+          localStorage.setItem("pt_users", JSON.stringify(all3));
+          setUser(function(u){ return Object.assign({}, u, { family: newFamily, familyCode: familyCode }); });
+        }
+
+        return (
+          <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:16,overflowY:"auto" }}
+            onClick={function(){ setShowFamily(false); }}>
+            <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.accent,borderRadius:20,padding:24,maxWidth:440,width:"100%",marginTop:20 }}
+              onClick={function(e){ e.stopPropagation(); }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+                <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text }}>&#128106; Family Account</h2>
+                <button onClick={function(){ setShowFamily(false); }}
+                  style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer" }}>&#x2715;</button>
+              </div>
+
+              <div style={{ background:C.bg,border:"1.5px solid "+C.border,borderRadius:14,padding:16,marginBottom:20 }}>
+                <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:4 }}>Your Family Code</p>
+                <p style={{ fontSize:13,color:C.muted,marginBottom:12 }}>Share this code with family members. They can view all dogs and log daily care.</p>
+                <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+                  <div style={{ flex:1,background:C.card,border:"1.5px solid "+C.accent,borderRadius:10,padding:"12px 16px",fontFamily:"monospace",fontSize:20,fontWeight:800,color:C.accent,letterSpacing:".15em",textAlign:"center" }}>
+                    {familyCode}
+                  </div>
+                  <button onClick={function(){
+                    if (navigator.clipboard) navigator.clipboard.writeText(familyCode).catch(function(){});
+                  }}
+                    style={{ background:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0 }}>
+                    Copy
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ background:C.accentFaint,border:"1.5px solid "+C.accent,borderRadius:12,padding:14,marginBottom:20 }}>
+                <p style={{ fontSize:13,fontWeight:700,color:C.accent,marginBottom:8 }}>Family members can:</p>
+                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x2705; View all dogs and info</p>
+                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x2705; Log food, water, outside</p>
+                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x274C; Cannot add or edit dogs</p>
+                <p style={{ fontSize:13,color:C.text }}>&#x274C; Cannot edit health records or documents</p>
+              </div>
+
+              <p style={{ fontSize:14,fontWeight:800,color:C.text,marginBottom:12 }}>Members ({myFamily.length}/4)</p>
+              {myFamily.length === 0 ? (
+                <div style={{ textAlign:"center",padding:24,background:C.bg,borderRadius:12,border:"1.5px dashed "+C.border }}>
+                  <p style={{ fontSize:14,color:C.muted }}>No family members yet. Share your code to invite them!</p>
+                </div>
+              ) : (
+                <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
+                  {myFamily.map(function(member){
+                    return (
+                      <div key={member.email} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px" }}>
+                        <div style={{ width:40,height:40,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:"#fff",flexShrink:0 }}>
+                          {(member.name||"?")[0].toUpperCase()}
+                        </div>
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <p style={{ fontSize:14,fontWeight:700,color:C.text }}>{member.name}</p>
+                          <p style={{ fontSize:12,color:C.muted }}>{member.email}</p>
+                        </div>
+                        <button onClick={function(){ removeMember(member.email); }}
+                          style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0 }}>
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {showTutorial && (
+        <TutorialModal
+          userName={user.name}
+          onClose={function(){
+            setShowTutorial(false);
+            // Mark tutorial as done
+            var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+            if (all[user.email]) {
+              all[user.email].tutorialDone = true;
+              localStorage.setItem("pt_users", JSON.stringify(all));
+            }
+          }}
+        />
+      )}
+
       {showProfile && (
         <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
           <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
@@ -7626,6 +8403,34 @@ export default function PawTraks() {
           <FF label="Email">
             <input value={user.email} disabled style={{ opacity:.5 }} />
           </FF>
+
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+              <span style={{ fontSize:20 }}>👨‍👩‍👧</span>
+              <div>
+                <p style={{ fontSize:13,fontWeight:600,color:C.text }}>Family Account</p>
+                <p style={{ fontSize:13,color:C.muted,marginTop:2,fontWeight:700 }}>Invite up to 4 family members</p>
+              </div>
+            </div>
+            <button onClick={function(){ setShowProfile(false); setShowFamily(true); }}
+              style={{ background:C.accent,border:"none",color:"#fff",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+              Manage
+            </button>
+          </div>
+
+          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
+            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+              <span style={{ fontSize:20 }}>🐾</span>
+              <div>
+                <p style={{ fontSize:13,fontWeight:600,color:C.text }}>App Tutorial</p>
+                <p style={{ fontSize:13,color:C.muted,marginTop:2,fontWeight:700 }}>Learn how to use PawTraks</p>
+              </div>
+            </div>
+            <button onClick={function(){ setShowProfile(false); setShowTutorial(true); }}
+              style={{ background:C.accent,border:"none",color:"#fff",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+              Start
+            </button>
+          </div>
 
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
