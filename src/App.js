@@ -7593,10 +7593,27 @@ export default function PawTraks() {
 
   function sendScheduleToServer(dogList, userId) {
     if (!userId || !dogList) return;
+    var now = Date.now();
+    var schedule = [];
+    dogList.forEach(function(dog) {
+      var name = dog.name || 'Your dog';
+      var fedCooldown = getFedCooldown(dog);
+      var lastFed = dog.lastFed ? new Date(dog.lastFed).getTime() : 0;
+      var feedDue = lastFed ? lastFed + fedCooldown : now;
+      schedule.push({ dueAt: Math.max(feedDue, now), title: '🍽️ ' + name + ' needs to be fed!', body: 'Time to feed ' + name + '.' });
+      var waterCooldown = getWaterCooldown(dog);
+      var lastWater = dog.lastWater ? new Date(dog.lastWater).getTime() : 0;
+      var waterDue = lastWater ? lastWater + waterCooldown : now;
+      schedule.push({ dueAt: Math.max(waterDue, now), title: '💧 ' + name + ' needs water!', body: 'Time to refresh their water bowl.' });
+      var outsideCooldown = getOutsideCooldown(dog);
+      var lastOutside = dog.lastOutside ? new Date(dog.lastOutside).getTime() : 0;
+      var outsideDue = lastOutside ? lastOutside + outsideCooldown : now;
+      schedule.push({ dueAt: Math.max(outsideDue, now), title: '🌳 ' + name + ' needs to go outside!', body: 'Time to take ' + name + ' for a walk.' });
+    });
     fetch(PUSH_SERVER + '/schedule', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: userId, dogs: dogList })
+      body: JSON.stringify({ userId: userId, schedule: schedule })
     }).catch(function(){});
   }
 
