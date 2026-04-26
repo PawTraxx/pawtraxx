@@ -7352,6 +7352,12 @@ export default function PawTraks() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var u = users[s.email];
       if (!u) { localStorage.removeItem("pt_session"); return; }
+      // Fix name: if it looks like an email or is missing, use username
+      if (u.username && (!u.name || u.name.includes("@"))) {
+        u = Object.assign({}, u, { name: u.username });
+        users[s.email] = u;
+        localStorage.setItem("pt_users", JSON.stringify(users));
+      }
       setUser(u);
       setDogs(u.dogs || []);
     } catch(e) {
@@ -7644,8 +7650,12 @@ export default function PawTraks() {
     var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var sessionEntry = { loginAt: new Date().toISOString(), logoutAt: null, duration: null };
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
+    // Fix name: if it looks like an email or is missing, use username instead
+    var storedName = allUsers[u.email].name || "";
+    if (allUsers[u.email].username && (!storedName || storedName.includes("@"))) {
+      allUsers[u.email].name = allUsers[u.email].username;
+    }
     allUsers[u.email] = Object.assign({}, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
-
 
     // If this is a family member, load the owner's dogs
     var updatedUser = Object.assign({}, u, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
@@ -8105,7 +8115,7 @@ export default function PawTraks() {
                     {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : "👤"}
                   </div>
                   <div>
-                    <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.username ? "@"+user.username : user.name}</p>
+                    <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.username ? user.username : user.name}</p>
                     {user.username && <p style={{ fontSize:13,color:C.muted,fontWeight:500,marginBottom:1 }}>{user.name}</p>}
                     <p style={{ fontSize:13,color:C.muted }}>{user.email}</p>
                   </div>
@@ -8368,7 +8378,7 @@ export default function PawTraks() {
 
       {showTutorial && (
         <TutorialModal
-          userName={user.username ? "@"+user.username : user.name}
+          userName={user.username ? user.username : user.name}
           onClose={function(){
             setShowTutorial(false);
             // Mark tutorial as done
@@ -8382,7 +8392,7 @@ export default function PawTraks() {
       )}
 
       {showProfile && (
-        <Modal title={(user.username ? "@"+user.username : user.name) + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
+        <Modal title={(user.username ? user.username : user.name) + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
           <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
             style={{ background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",textAlign:"center" }}>
             Sign Out
