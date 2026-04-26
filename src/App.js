@@ -1900,7 +1900,6 @@ function Auth({ onLogin }) {
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
     // console.log("users", users)
     if (mode === "register") {
-      if (!form.name) { setErr("Enter your name."); return; }
       if (!form.username || form.username.trim().length < 3) { setErr("Username must be at least 3 characters."); return; }
       if (!/^[a-zA-Z0-9_]+$/.test(form.username.trim())) { setErr("Username can only contain letters, numbers, and underscores."); return; }
       // Check username uniqueness
@@ -1993,14 +1992,14 @@ function Auth({ onLogin }) {
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var u = { 
-      name:form.name,
+      name:form.username.trim(),
       username: form.username.trim().toLowerCase(),
       email:form.email, 
       password:form.password, 
       phone:form.phone, 
       dogs:[], 
       createdAt:new Date().toISOString(),
-      referralCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
+      referralCode: form.username.trim().toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
       referralCount: 0
     };
 
@@ -2010,7 +2009,7 @@ function Auth({ onLogin }) {
       var referrer = Object.values(users).find(function(u2){ return u2.referralCode && u2.referralCode.toUpperCase() === refCode; });
       if (referrer && referrer.email !== form.email) {
         var refTP = (referrer.trainerPoints || 0) + 250;
-        var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + form.name + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
+        var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + form.username.trim() + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
         users[referrer.email] = Object.assign({}, referrer, { trainerPoints: refTP, tpLog: refLog, referralCount: (referrer.referralCount || 0) + 1 });
       }
     }
@@ -2020,7 +2019,7 @@ function Auth({ onLogin }) {
     sendSimulatedEmail(
       form.email,
       "Welcome to PawTraks! 🐾",
-      "Hi "+form.name+",\n\nYour PawTraks account has been created successfully.\n\nEmail: "+form.email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
+      "Hi "+form.username.trim()+",\n\nYour PawTraks account has been created successfully.\n\nEmail: "+form.email+"\nJoined: "+new Date().toLocaleDateString()+"\n\nStart adding your dogs and tracking their care today!\n\n— The PawTraks Team"
     );
     onLogin(u);
   }
@@ -2153,9 +2152,6 @@ function Auth({ onLogin }) {
                   );
                 })}
               </div>
-              {mode === "register" && (
-                <FF label="Your Name"><input placeholder="Jane Smith" value={form.name} onChange={function(e){upd("name",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} /></FF>
-              )}
               {mode === "register" && (
                 <FF label="Username" hint="3–20 characters. Letters, numbers, underscores only.">
                   <div style={{ position:"relative" }}>
