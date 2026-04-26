@@ -2177,6 +2177,10 @@ function Auth({ onLogin }) {
                 <FF label="Invite Code" hint="Required to create an account">
                   <input placeholder="Enter your invite code" value={form.inviteCode} onChange={function(e){upd("inviteCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
                   <input placeholder="Referral code (optional)" value={form.referralCode} onChange={function(e){upd("referralCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
+                  <div style={{ display:"flex",alignItems:"flex-start",gap:6,marginTop:6,padding:"8px 10px",background:"rgba(82,201,125,0.08)",border:"1px solid rgba(82,201,125,0.25)",borderRadius:8 }}>
+                    <span style={{ fontSize:13,marginTop:1 }}>🚧</span>
+                    <p style={{ fontSize:12,color:"#52c97d",fontWeight:600,margin:0,lineHeight:1.5 }}>Referral rewards are coming soon — enter a code now and you'll get credit automatically when they launch!</p>
+                  </div>
                 </FF>
               )}
               {msg && <p style={{ color:C.green,fontSize:13,marginBottom:12,lineHeight:1.5 }}>{msg}</p>}
@@ -4571,6 +4575,564 @@ function LogDayGroup({ day, entries, C, dog, onUpdate, setConfirmDialog }) {
   );
 }
 
+
+
+function sortTimes(times) {
+  return times.slice().sort(function(a, b) {
+    function toMins(t) {
+      var parts = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      if (!parts) return 0;
+      var h = parseInt(parts[1]); var m = parseInt(parts[2]); var ampm = parts[3].toUpperCase();
+      if (ampm === "PM" && h !== 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      return h * 60 + m;
+    }
+    return toMins(a) - toMins(b);
+  });
+}
+
+function ScheduleTab({ dog, onUpdate, allDogs, feeding, outside, C }) {
+  var [showSched, setShowSched] = useState(false);
+  var [schedType, setSchedType] = useState("feeding");
+  var [editMode, setEditMode] = useState("time");
+  var [editTimes, setEditTimes] = useState([]);
+  var [editInterval, setEditInterval] = useState(8);
+  var [newTime, setNewTime] = useState("08:00");
+  var [showGroupMgr, setShowGroupMgr] = useState(false);
+  var [groupName, setGroupName] = useState("");
+  var [groupApplyPrompt, setGroupApplyPrompt] = useState(null); // { schedule, type } when pending group apply
+  var [expandedGroupId, setExpandedGroupId] = useState(null);
+  var [editingGroupSched, setEditingGroupSched] = useState(null); // { group, type, mode, times, interval }
+  var [groupSchedNewTime, setGroupSchedNewTime] = useState("08:00");
+
+  var cs = dog.customSchedule || {};
+  var feedCustom = cs.feeding;
+  var outCustom = cs.outdoor;
+
+  function openEditor(type) {
+    setSchedType(type);
+    var existing = type === "feeding" ? feedCustom : outCustom;
+    if (existing) {
+      setEditMode(existing.type);
+      setEditTimes(existing.times ? existing.times.slice() : []);
+      setEditInterval(existing.interval || (type === "feeding" ? 8 : 6));
+    } else {
+      setEditMode("time");
+      setEditTimes(type === "feeding" ? feeding.times.slice() : outside.slice());
+      setEditInterval(type === "feeding" ? 8 : 6);
+    }
+    setShowSched(true);
+  }
+
+  function saveSchedule() {
+    var updated = Object.assign({}, dog.customSchedule || {});
+    updated[schedType] = editMode === "time"
+      ? { type:"time", times: sortTimes(editTimes) }
+      : { type:"interval", interval: editInterval };
+    onUpdate(Object.assign({}, dog, { customSchedule: updated }));
+    setShowSched(false);
+    // If dog is in a group and there are other dogs, prompt to apply to group
+    var groups = (function(){ try { return JSON.parse(localStorage.getItem("pt_groups_" + (dog.ownerEmail || "")) || "[]"); } catch(e) { return []; } })();
+    var dGroup = groups.find(function(g){ return g.dogIds && g.dogIds.includes(dog.id); });
+    if (dGroup && dGroup.dogIds.length > 1) {
+      setGroupApplyPrompt({ schedule: updated[schedType], type: schedType, group: dGroup });
+    }
+  }
+
+  function applyScheduleToGroup(scheduleObj, schedType, group) {
+    var otherDogIds = group.dogIds.filter(function(id){ return id !== dog.id; });
+    if (!allDogs) return;
+    otherDogIds.forEach(function(id) {
+      var target = allDogs.find(function(d){ return d.id === id; });
+      if (!target) return;
+      var targetUpdated = Object.assign({}, target.customSchedule || {});
+      targetUpdated[schedType] = scheduleObj;
+      onUpdate(Object.assign({}, target, { customSchedule: targetUpdated }));
+    });
+    setGroupApplyPrompt(null);
+  }
+
+  function clearSchedule(type) {
+    var updated = Object.assign({}, dog.customSchedule || {});
+    delete updated[type];
+    onUpdate(Object.assign({}, dog, { customSchedule: updated }));
+  }
+
+  function addTime() {
+    if (!newTime) return;
+    var d = new Date("2000-01-01T" + newTime);
+    var h = d.getHours(); var m = d.getMinutes();
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12 || 12;
+    var label = h12 + ":" + (m < 10 ? "0" + m : m) + " " + ampm;
+    if (!editTimes.includes(label)) setEditTimes(editTimes.concat([label]));
+  }
+
+  function renderTimePills(times, accentColor, faintColor) {
+    return times.map(function(t) {
+      var now = new Date();
+      var parts = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+      var feedTime = null;
+      if (parts) {
+        var h = parseInt(parts[1]); var m = parseInt(parts[2]); var ampm = parts[3].toUpperCase();
+        if (ampm === "PM" && h !== 12) h += 12;
+        if (ampm === "AM" && h === 12) h = 0;
+        feedTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+      }
+      var minsUntil = feedTime ? Math.round((feedTime - now) / 60000) : null;
+      var statusLabel = null;
+      var statusColor = C.muted;
+      if (minsUntil !== null) {
+        if (minsUntil > 60) { statusLabel = "in " + Math.floor(minsUntil/60) + "h " + (minsUntil%60) + "m"; statusColor = accentColor; }
+        else if (minsUntil > 0) { statusLabel = "in " + minsUntil + "m"; statusColor = C.yellow; }
+        else if (minsUntil > -60) { statusLabel = Math.abs(minsUntil) + "m ago"; statusColor = C.red; }
+        else { statusLabel = Math.floor(Math.abs(minsUntil)/60) + "h ago"; statusColor = C.muted; }
+      }
+      return (
+        <div key={t} style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
+          <div style={{ background:faintColor,border:"1.5px solid "+accentColor,borderRadius:10,padding:"11px 20px",color:accentColor,fontSize:18,fontWeight:800 }}>{t}</div>
+          {statusLabel && <span style={{ fontSize:12,color:statusColor,fontWeight:600 }}>{statusLabel}</span>}
+        </div>
+      );
+    });
+  }
+
+  var groupKey = "pt_groups_" + (dog.ownerEmail || "");
+  var allGroups = (function(){ try { return JSON.parse(localStorage.getItem(groupKey) || "[]"); } catch(e) { return []; } })();
+  function saveGroups(g) { localStorage.setItem(groupKey, JSON.stringify(g)); }
+  var dogGroup = allGroups.find(function(g){ return g.dogIds && g.dogIds.includes(dog.id); });
+
+  return (
+    <div className="fadeIn">
+
+      {/* Schedule Editor Modal */}
+      {showSched && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:10010,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}
+          onClick={function(){ setShowSched(false); }}>
+          <div style={{ background:C.card,borderRadius:20,maxWidth:420,width:"100%",padding:24,border:"2px solid "+C.accent }}
+            onClick={function(e){ e.stopPropagation(); }}>
+            <h3 style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:900,color:C.text,marginBottom:4 }}>
+              {schedType === "feeding" ? "🍗 Feeding Schedule" : "🌳 Outdoor Schedule"}
+            </h3>
+            <p style={{ fontSize:14,color:C.muted,marginBottom:16 }}>Customize {dog.name}'s schedule</p>
+            <div style={{ display:"flex",gap:8,marginBottom:20 }}>
+              {[{val:"time",label:"⏰ Specific times"},{val:"interval",label:"🔁 Set interval"}].map(function(opt){
+                var active = editMode === opt.val;
+                return (
+                  <button key={opt.val} onClick={function(){ setEditMode(opt.val); }}
+                    style={{ flex:1,padding:"10px 8px",borderRadius:10,border:"1.5px solid "+(active?C.accent:C.border),background:active?C.accentFaint:"transparent",color:active?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer" }}>
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
+            {editMode === "time" ? (
+              <div>
+                <p style={{ fontSize:13,fontWeight:700,color:C.muted,marginBottom:8 }}>Times ({editTimes.length} set)</p>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:12,minHeight:40 }}>
+                  {sortTimes(editTimes).map(function(t){
+                    return (
+                      <div key={t} style={{ display:"flex",alignItems:"center",gap:4,background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:8,padding:"6px 10px" }}>
+                        <span style={{ fontSize:17,fontWeight:800,color:C.accent }}>{t}</span>
+                        <button onClick={function(){ setEditTimes(editTimes.filter(function(x){ return x !== t; })); }}
+                          style={{ background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:14,lineHeight:1,padding:0,marginLeft:2 }}>✕</button>
+                      </div>
+                    );
+                  })}
+                  {editTimes.length === 0 && <p style={{ fontSize:13,color:C.muted }}>No times set yet</p>}
+                </div>
+                <div style={{ display:"flex",gap:8 }}>
+                  <input type="time" value={newTime} onChange={function(e){ setNewTime(e.target.value); }}
+                    style={{ flex:1,padding:"10px 12px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:14 }} />
+                  <button onClick={addTime}
+                    style={{ padding:"10px 16px",borderRadius:10,border:"none",background:C.accent,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer" }}>+ Add</button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <p style={{ fontSize:13,fontWeight:700,color:C.muted,marginBottom:8 }}>Every how many hours?</p>
+                <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:8 }}>
+                  <input type="range" min="1" max="24" value={editInterval}
+                    onChange={function(e){ setEditInterval(parseInt(e.target.value)); }}
+                    style={{ flex:1,accentColor:C.accent }} />
+                  <span style={{ fontFamily:"Fraunces",fontSize:24,fontWeight:900,color:C.accent,minWidth:48,textAlign:"center" }}>{editInterval}h</span>
+                </div>
+                <p style={{ fontSize:13,color:C.muted }}>{Math.floor(24/editInterval)} time{Math.floor(24/editInterval)!==1?"s":""} per day</p>
+              </div>
+            )}
+            <div style={{ display:"flex",gap:8,marginTop:20 }}>
+              <button onClick={function(){ setShowSched(false); }}
+                style={{ flex:1,padding:"12px",borderRadius:10,border:"1.5px solid "+C.border,background:"transparent",color:C.muted,fontWeight:700,fontSize:14,cursor:"pointer" }}>
+                Cancel
+              </button>
+              <button onClick={saveSchedule}
+                style={{ flex:2,padding:"12px",borderRadius:10,border:"none",background:C.accent,color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer" }}>
+                Save Schedule
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Apply Prompt */}
+      {groupApplyPrompt && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:10011,display:"flex",alignItems:"center",justifyContent:"center",padding:16 }}>
+          <div style={{ background:C.card,borderRadius:20,maxWidth:380,width:"100%",padding:24,border:"2px solid "+C.accent }}>
+            <div style={{ textAlign:"center",marginBottom:16 }}>
+              <span style={{ fontSize:42 }}>👥</span>
+              <h3 style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:900,color:C.text,marginTop:8,marginBottom:6 }}>Apply to Group?</h3>
+              <p style={{ fontSize:14,color:C.muted,lineHeight:1.5 }}>
+                {dog.name} is in <strong style={{ color:C.accent }}>{groupApplyPrompt.group.name}</strong>. Apply this {groupApplyPrompt.type} schedule to all {groupApplyPrompt.group.dogIds.length} dogs in the group?
+              </p>
+            </div>
+            <button onClick={function(){ applyScheduleToGroup(groupApplyPrompt.schedule, groupApplyPrompt.type, groupApplyPrompt.group); }}
+              style={{ width:"100%",padding:"13px",borderRadius:10,border:"none",background:C.accent,color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer",marginBottom:8 }}>
+              ✓ Apply to All Dogs in Group
+            </button>
+            <button onClick={function(){ setGroupApplyPrompt(null); }}
+              style={{ width:"100%",padding:"12px",borderRadius:10,border:"1.5px solid "+C.border,background:"transparent",color:C.muted,fontWeight:700,fontSize:14,cursor:"pointer" }}>
+              Just {dog.name} — Keep Others Separate
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Group Manager Modal */}
+      {showGroupMgr && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:10010,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:16,overflowY:"auto" }}
+          onClick={function(){ setShowGroupMgr(false); setEditingGroupSched(null); }}>
+          <div style={{ background:C.card,borderRadius:20,maxWidth:440,width:"100%",padding:24,border:"2px solid "+C.blue,marginTop:16 }}
+            onClick={function(e){ e.stopPropagation(); }}>
+
+            <h3 style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:900,color:C.text,marginBottom:4 }}>👥 Dog Groups</h3>
+            <p style={{ fontSize:14,color:C.muted,marginBottom:16 }}>Create groups to share a feeding and outdoor schedule across multiple dogs.</p>
+
+            {/* Existing groups list */}
+            {allGroups.length > 0 && (
+              <div style={{ marginBottom:16 }}>
+                {allGroups.map(function(g){
+                  var isExpanded = expandedGroupId === g.id;
+                  var isCurrentDogGroup = dogGroup && dogGroup.id === g.id;
+                  var groupDogs = allDogs ? allDogs.filter(function(d){ return g.dogIds.includes(d.id); }) : [];
+                  var gs = g.schedule || {};
+                  return (
+                    <div key={g.id} style={{ border:"1.5px solid "+(isCurrentDogGroup?C.accent:C.border),borderRadius:14,marginBottom:10,overflow:"hidden" }}>
+
+                      {/* Group header row */}
+                      <div style={{ display:"flex",alignItems:"center",gap:10,padding:"12px 14px",background:isCurrentDogGroup?C.accentFaint:C.bg }}>
+                        <span style={{ fontSize:20 }}>📦</span>
+                        <div style={{ flex:1,minWidth:0 }}>
+                          <p style={{ fontWeight:800,fontSize:15,color:isCurrentDogGroup?C.accent:C.text,margin:0 }}>{g.name}</p>
+                          <p style={{ fontSize:12,color:C.muted,margin:0 }}>{g.dogIds.length} dog{g.dogIds.length!==1?"s":""}{isCurrentDogGroup?" · Your group":""}</p>
+                        </div>
+                        <button onClick={function(){ setExpandedGroupId(isExpanded?null:g.id); }}
+                          style={{ background:"none",border:"none",fontSize:18,color:C.muted,cursor:"pointer",transform:isExpanded?"rotate(180deg)":"rotate(0deg)",transition:"transform .2s" }}>
+                          ▼
+                        </button>
+                      </div>
+
+                      {/* Expanded content */}
+                      {isExpanded && (
+                        <div style={{ padding:"12px 14px",borderTop:"1px solid "+C.border }}>
+
+                          {/* Dogs in group */}
+                          <p style={{ fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>Dogs in this group</p>
+                          <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:14 }}>
+                            {groupDogs.length > 0 ? groupDogs.map(function(d){
+                              return (
+                                <div key={d.id} style={{ display:"flex",alignItems:"center",gap:6,background:C.card,border:"1px solid "+C.border,borderRadius:8,padding:"5px 10px" }}>
+                                  <span style={{ fontSize:16 }}>{d.emoji||"🐕"}</span>
+                                  <span style={{ fontSize:13,fontWeight:700,color:C.text }}>{d.name}</span>
+                                  <button onClick={function(){
+                                    var updated = allGroups.map(function(gr){ return gr.id===g.id ? Object.assign({},gr,{dogIds:gr.dogIds.filter(function(id){ return id!==d.id; })}) : gr; }).filter(function(gr){ return gr.dogIds.length>0; });
+                                    saveGroups(updated);
+                                  }} style={{ background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:0,marginLeft:2 }}>✕</button>
+                                </div>
+                              );
+                            }) : <p style={{ fontSize:13,color:C.muted }}>No dogs assigned yet</p>}
+                          </div>
+
+                          {/* Add current dog to this group if not already in it */}
+                          {!isCurrentDogGroup && (
+                            <button onClick={function(){
+                              var updated = allGroups.map(function(gr){ return gr.id===g.id ? Object.assign({},gr,{dogIds:gr.dogIds.concat([dog.id])}) : gr; });
+                              saveGroups(updated);
+                            }} style={{ width:"100%",padding:"9px",borderRadius:9,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,fontWeight:700,fontSize:13,cursor:"pointer",marginBottom:12 }}>
+                              + Add {dog.name} to this group
+                            </button>
+                          )}
+
+                          {/* Group Schedule */}
+                          <p style={{ fontSize:12,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:8 }}>Group Schedule</p>
+
+                          {/* Feeding schedule for group */}
+                          <div style={{ background:C.bg,border:"1px solid "+(gs.feeding?C.green:C.border),borderRadius:10,padding:"10px 12px",marginBottom:8 }}>
+                            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                              <p style={{ fontSize:13,fontWeight:700,color:C.green,margin:0 }}>🍗 Feeding</p>
+                              <button onClick={function(){
+                                setEditingGroupSched({ group:g, type:"feeding", mode: gs.feeding?gs.feeding.type:"time", times: gs.feeding&&gs.feeding.times?gs.feeding.times.slice():[], interval: gs.feeding?gs.feeding.interval:8 });
+                                setGroupSchedNewTime("08:00");
+                              }} style={{ padding:"4px 10px",borderRadius:7,border:"1.5px solid "+C.green,background:"transparent",color:C.green,fontWeight:700,fontSize:12,cursor:"pointer" }}>
+                                {gs.feeding ? "✏️ Edit" : "+ Set"}
+                              </button>
+                            </div>
+                            {gs.feeding && (
+                              <p style={{ fontSize:13,color:C.muted,marginTop:4 }}>
+                                {gs.feeding.type==="time" ? gs.feeding.times.join(", ") : "Every "+gs.feeding.interval+"h"}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Outdoor schedule for group */}
+                          <div style={{ background:C.bg,border:"1px solid "+(gs.outdoor?C.blue:C.border),borderRadius:10,padding:"10px 12px",marginBottom:12 }}>
+                            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+                              <p style={{ fontSize:13,fontWeight:700,color:C.blue,margin:0 }}>🌳 Outdoor</p>
+                              <button onClick={function(){
+                                setEditingGroupSched({ group:g, type:"outdoor", mode: gs.outdoor?gs.outdoor.type:"time", times: gs.outdoor&&gs.outdoor.times?gs.outdoor.times.slice():[], interval: gs.outdoor?gs.outdoor.interval:6 });
+                                setGroupSchedNewTime("07:00");
+                              }} style={{ padding:"4px 10px",borderRadius:7,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,fontWeight:700,fontSize:12,cursor:"pointer" }}>
+                                {gs.outdoor ? "✏️ Edit" : "+ Set"}
+                              </button>
+                            </div>
+                            {gs.outdoor && (
+                              <p style={{ fontSize:13,color:C.muted,marginTop:4 }}>
+                                {gs.outdoor.type==="time" ? gs.outdoor.times.join(", ") : "Every "+gs.outdoor.interval+"h"}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Delete group */}
+                          <button onClick={function(){
+                            saveGroups(allGroups.filter(function(gr){ return gr.id!==g.id; }));
+                            setExpandedGroupId(null);
+                          }} style={{ width:"100%",padding:"8px",borderRadius:9,border:"1px solid "+C.red,background:"transparent",color:C.red,fontWeight:600,fontSize:13,cursor:"pointer" }}>
+                            Delete Group
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Group schedule editor inline */}
+            {editingGroupSched && (
+              <div style={{ background:C.bg,border:"2px solid "+C.accent,borderRadius:14,padding:16,marginBottom:16 }}>
+                <p style={{ fontFamily:"Fraunces",fontSize:16,fontWeight:800,color:C.text,marginBottom:4 }}>
+                  {editingGroupSched.type==="feeding"?"🍗":"🌳"} Edit {editingGroupSched.type==="feeding"?"Feeding":"Outdoor"} for {editingGroupSched.group.name}
+                </p>
+                <p style={{ fontSize:13,color:C.muted,marginBottom:12 }}>This schedule will apply to all dogs in this group.</p>
+                <div style={{ display:"flex",gap:8,marginBottom:14 }}>
+                  {[{val:"time",label:"⏰ Times"},{val:"interval",label:"🔁 Interval"}].map(function(opt){
+                    var active = editingGroupSched.mode===opt.val;
+                    return (
+                      <button key={opt.val} onClick={function(){ setEditingGroupSched(Object.assign({},editingGroupSched,{mode:opt.val})); }}
+                        style={{ flex:1,padding:"9px",borderRadius:9,border:"1.5px solid "+(active?C.accent:C.border),background:active?C.accentFaint:"transparent",color:active?C.accent:C.muted,fontWeight:700,fontSize:13,cursor:"pointer" }}>
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {editingGroupSched.mode==="time" ? (
+                  <div>
+                    <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:10,minHeight:36 }}>
+                      {sortTimes(editingGroupSched.times).map(function(t){
+                        return (
+                          <div key={t} style={{ display:"flex",alignItems:"center",gap:4,background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:7,padding:"5px 9px" }}>
+                            <span style={{ fontSize:17,fontWeight:800,color:C.accent }}>{t}</span>
+                            <button onClick={function(){ setEditingGroupSched(Object.assign({},editingGroupSched,{times:editingGroupSched.times.filter(function(x){ return x!==t; })})); }}
+                              style={{ background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,padding:0 }}>✕</button>
+                          </div>
+                        );
+                      })}
+                      {editingGroupSched.times.length===0 && <p style={{ fontSize:13,color:C.muted }}>No times added yet</p>}
+                    </div>
+                    <div style={{ display:"flex",gap:8 }}>
+                      <input type="time" value={groupSchedNewTime} onChange={function(e){ setGroupSchedNewTime(e.target.value); }}
+                        style={{ flex:1,padding:"9px 12px",borderRadius:9,border:"1.5px solid "+C.border,background:C.card,color:C.text,fontSize:14 }} />
+                      <button onClick={function(){
+                        if (!groupSchedNewTime) return;
+                        var d = new Date("2000-01-01T"+groupSchedNewTime);
+                        var h=d.getHours(); var m=d.getMinutes();
+                        var ampm=h>=12?"PM":"AM"; var h12=h%12||12;
+                        var label=h12+":"+(m<10?"0"+m:m)+" "+ampm;
+                        if (!editingGroupSched.times.includes(label)) setEditingGroupSched(Object.assign({},editingGroupSched,{times:editingGroupSched.times.concat([label])}));
+                      }} style={{ padding:"9px 14px",borderRadius:9,border:"none",background:C.accent,color:"#fff",fontWeight:700,fontSize:14,cursor:"pointer" }}>+ Add</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:6 }}>
+                      <input type="range" min="1" max="24" value={editingGroupSched.interval}
+                        onChange={function(e){ setEditingGroupSched(Object.assign({},editingGroupSched,{interval:parseInt(e.target.value)})); }}
+                        style={{ flex:1,accentColor:C.accent }} />
+                      <span style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:C.accent,minWidth:44,textAlign:"center" }}>{editingGroupSched.interval}h</span>
+                    </div>
+                    <p style={{ fontSize:13,color:C.muted }}>{Math.floor(24/editingGroupSched.interval)} time{Math.floor(24/editingGroupSched.interval)!==1?"s":""} per day</p>
+                  </div>
+                )}
+                <div style={{ display:"flex",gap:8,marginTop:14 }}>
+                  <button onClick={function(){ setEditingGroupSched(null); }}
+                    style={{ flex:1,padding:"10px",borderRadius:9,border:"1.5px solid "+C.border,background:"transparent",color:C.muted,fontWeight:700,fontSize:14,cursor:"pointer" }}>Cancel</button>
+                  <button onClick={function(){
+                    var schedObj = editingGroupSched.mode==="time"
+                      ? { type:"time", times:sortTimes(editingGroupSched.times) }
+                      : { type:"interval", interval:editingGroupSched.interval };
+                    // Save to group
+                    var updated = allGroups.map(function(gr){
+                      if (gr.id!==editingGroupSched.group.id) return gr;
+                      var s = Object.assign({},gr.schedule||{});
+                      s[editingGroupSched.type]=schedObj;
+                      return Object.assign({},gr,{schedule:s});
+                    });
+                    saveGroups(updated);
+                    // Apply to all dogs in group
+                    if (allDogs) {
+                      editingGroupSched.group.dogIds.forEach(function(id){
+                        var target=allDogs.find(function(d){ return d.id===id; });
+                        if (!target) return;
+                        var cs=Object.assign({},target.customSchedule||{});
+                        cs[editingGroupSched.type]=schedObj;
+                        onUpdate(Object.assign({},target,{customSchedule:cs}));
+                      });
+                    }
+                    setEditingGroupSched(null);
+                  }} style={{ flex:2,padding:"10px",borderRadius:9,border:"none",background:C.accent,color:"#fff",fontWeight:800,fontSize:15,cursor:"pointer" }}>
+                    Save &amp; Apply to All
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Create new group */}
+            <p style={{ fontSize:13,fontWeight:700,color:C.muted,marginBottom:8 }}>Create a new group</p>
+            <div style={{ display:"flex",gap:8 }}>
+              <input placeholder="Group name (e.g. Morning Pack)" value={groupName}
+                onChange={function(e){ setGroupName(e.target.value); }}
+                style={{ flex:1,padding:"11px 14px",borderRadius:10,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:14,boxSizing:"border-box" }} />
+              <button onClick={function(){
+                if (!groupName.trim()) return;
+                var newGroup={ id:Date.now().toString(), name:groupName.trim(), dogIds:[dog.id], schedule:{} };
+                saveGroups(allGroups.concat([newGroup]));
+                setGroupName(""); setExpandedGroupId(newGroup.id);
+              }} style={{ padding:"11px 16px",borderRadius:10,border:"none",background:C.blue,color:"#fff",fontWeight:800,fontSize:14,cursor:"pointer",flexShrink:0 }}>
+                Create
+              </button>
+            </div>
+
+            <button onClick={function(){ setShowGroupMgr(false); setEditingGroupSched(null); }}
+              style={{ width:"100%",padding:"11px",borderRadius:10,border:"1.5px solid "+C.border,background:"transparent",color:C.muted,fontWeight:700,fontSize:14,cursor:"pointer",marginTop:16 }}>
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header */}
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+        <div>
+          <h3 style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:900,color:C.text,margin:0 }}>Care Schedule</h3>
+          {dogGroup && <p style={{ fontSize:12,color:C.blue,fontWeight:600,marginTop:2 }}>📦 Group: {dogGroup.name}</p>}
+        </div>
+        <button onClick={function(){ setShowGroupMgr(true); }}
+          style={{ padding:"7px 12px",borderRadius:9,border:"1.5px solid "+C.blue,background:"transparent",color:C.blue,fontWeight:700,fontSize:13,cursor:"pointer" }}>
+          👥 Groups
+        </button>
+      </div>
+
+      {/* Feeding */}
+      <div style={{ marginBottom:20 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+          <p className="sectionLabel" style={{ color:C.green,margin:0 }}>🍗 Feeding Schedule</p>
+          <div style={{ display:"flex",gap:6 }}>
+            {feedCustom && <button onClick={function(){ clearSchedule("feeding"); }}
+              style={{ padding:"5px 10px",borderRadius:7,border:"1px solid "+C.red,background:"transparent",color:C.red,fontWeight:600,fontSize:12,cursor:"pointer" }}>Reset</button>}
+            <button onClick={function(){ openEditor("feeding"); }}
+              style={{ padding:"5px 10px",borderRadius:7,border:"1.5px solid "+C.green,background:feedCustom?C.greenFaint:"transparent",color:C.green,fontWeight:700,fontSize:12,cursor:"pointer" }}>
+              {feedCustom ? "✏️ Edit" : "+ Customize"}
+            </button>
+          </div>
+        </div>
+        <div style={{ background:C.card,border:"1px solid "+(feedCustom?C.green:C.accent),borderRadius:14,padding:16 }}>
+          {feedCustom ? (
+            feedCustom.type === "time" ? (
+              <div>
+                <span style={{ fontSize:11,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.08em",background:C.greenFaint,padding:"3px 8px",borderRadius:6,display:"inline-block",marginBottom:12 }}>Custom · Time-based</span>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:10 }}>{renderTimePills(feedCustom.times,C.green,C.greenFaint)}</div>
+                <p style={{ fontSize:14,color:C.muted }}>{feedCustom.times.length} meal{feedCustom.times.length!==1?"s":""} per day</p>
+              </div>
+            ) : (
+              <div>
+                <span style={{ fontSize:11,fontWeight:700,color:C.green,textTransform:"uppercase",letterSpacing:"0.08em",background:C.greenFaint,padding:"3px 8px",borderRadius:6,display:"inline-block",marginBottom:12 }}>Custom · Interval</span>
+                <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:C.green,marginBottom:4 }}>Every {feedCustom.interval}h</p>
+                <p style={{ fontSize:14,color:C.muted }}>{Math.floor(24/feedCustom.interval)} feeding{Math.floor(24/feedCustom.interval)!==1?"s":""} per day</p>
+              </div>
+            )
+          ) : (
+            <div>
+              <p style={{ color:C.text,fontSize:15,fontWeight:500,marginBottom:14 }}>{feeding.note}</p>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:12 }}>{renderTimePills(feeding.times,C.green,C.greenFaint)}</div>
+              <p style={{ color:C.text,fontSize:15,fontWeight:500 }}>Recommended: <strong style={{ color:C.accent }}>{feeding.cups} cup(s)</strong> per meal · <strong style={{ color:C.accent }}>{feeding.times.length}</strong> meals/day</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Outdoor */}
+      <div style={{ marginBottom:16 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8 }}>
+          <p className="sectionLabel" style={{ color:C.blue,margin:0 }}>🌳 Outdoor Breaks</p>
+          <div style={{ display:"flex",gap:6 }}>
+            {outCustom && <button onClick={function(){ clearSchedule("outdoor"); }}
+              style={{ padding:"5px 10px",borderRadius:7,border:"1px solid "+C.red,background:"transparent",color:C.red,fontWeight:600,fontSize:12,cursor:"pointer" }}>Reset</button>}
+            <button onClick={function(){ openEditor("outdoor"); }}
+              style={{ padding:"5px 10px",borderRadius:7,border:"1.5px solid "+C.blue,background:outCustom?C.blueFaint:"transparent",color:C.blue,fontWeight:700,fontSize:12,cursor:"pointer" }}>
+              {outCustom ? "✏️ Edit" : "+ Customize"}
+            </button>
+          </div>
+        </div>
+        <div style={{ background:C.card,border:"1px solid "+(outCustom?C.blue:C.accent),borderRadius:14,padding:16 }}>
+          {outCustom ? (
+            outCustom.type === "time" ? (
+              <div>
+                <span style={{ fontSize:11,fontWeight:700,color:C.blue,textTransform:"uppercase",letterSpacing:"0.08em",background:C.blueFaint,padding:"3px 8px",borderRadius:6,display:"inline-block",marginBottom:12 }}>Custom · Time-based</span>
+                <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:10 }}>{renderTimePills(outCustom.times,C.blue,C.blueFaint)}</div>
+                <p style={{ fontSize:14,color:C.muted }}>{outCustom.times.length} outing{outCustom.times.length!==1?"s":""} per day</p>
+              </div>
+            ) : (
+              <div>
+                <span style={{ fontSize:11,fontWeight:700,color:C.blue,textTransform:"uppercase",letterSpacing:"0.08em",background:C.blueFaint,padding:"3px 8px",borderRadius:6,display:"inline-block",marginBottom:12 }}>Custom · Interval</span>
+                <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:C.blue,marginBottom:4 }}>Every {outCustom.interval}h</p>
+                <p style={{ fontSize:14,color:C.muted }}>{Math.floor(24/outCustom.interval)} outing{Math.floor(24/outCustom.interval)!==1?"s":""} per day</p>
+              </div>
+            )
+          ) : (
+            <div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:12 }}>
+                {renderTimePills(outside, C.blue, C.blueFaint)}
+              </div>
+              <p style={{ color:C.text,fontSize:15,fontWeight:500 }}><strong style={{ color:C.accent }}>{outside.length}</strong> recommended outings daily</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Legend */}
+      <div style={{ display:"flex",gap:12,flexWrap:"wrap",padding:"6px 0" }}>
+        {[{col:C.green,label:"On schedule"},{col:C.yellow,label:"Coming up soon"},{col:C.red,label:"Overdue"},{col:C.muted,label:"Already passed"}].map(function(k){
+          return (
+            <div key={k.label} style={{ display:"flex",alignItems:"center",gap:6 }}>
+              <div style={{ width:10,height:10,borderRadius:"50%",background:k.col,flexShrink:0 }} />
+              <span style={{ fontSize:13,color:k.col,fontWeight:600 }}>{k.label}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setActiveTab, focusedSection, setFocusedSection, setSelectedBadge, earnTP, setCooldownAlert, userTier, onUpgrade }) {
   var C = useTheme();
   var tabBarRef = useRef(null);
@@ -4904,80 +5466,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
         </div>
       )}
 
-      {activeTab === "schedule" && (
-        <div className="fadeIn">
-          <div style={{ marginBottom:20 }}>
-            <p className="sectionLabel" style={{ color:C.green }}>Feeding Schedule</p>
-            <div style={{ background:C.card,border:"1px solid "+C.accent,borderRadius:14,padding:16 }}>
-              <p style={{ color:C.text,fontSize:15,fontWeight:500,marginBottom:14 }}>{feeding.note}</p>
-              <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:14 }}>
-                {feeding.times.map(function(t) {
-                  // Parse feed time into today's date
-                  var now = new Date();
-                  var parts = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
-                  var feedTime = null;
-                  if (parts) {
-                    var h = parseInt(parts[1]); var m = parseInt(parts[2]); var ampm = parts[3].toUpperCase();
-                    if (ampm === "PM" && h !== 12) h += 12;
-                    if (ampm === "AM" && h === 12) h = 0;
-                    feedTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
-                  }
-                  var minsUntil = feedTime ? Math.round((feedTime - now) / 60000) : null;
-                  var tColor, tBg, tBorder, statusLabel;
-                  if (minsUntil === null) {
-                    tColor = C.green; tBg = C.greenFaint; tBorder = C.green; statusLabel = null;
-                  } else if (minsUntil > 60) {
-                    tColor = C.green; tBg = C.greenFaint; tBorder = C.green;
-                    statusLabel = "in " + Math.floor(minsUntil/60) + "h " + (minsUntil%60) + "m";
-                  } else if (minsUntil > 0) {
-                    tColor = C.yellow; tBg = C.yellowFaint; tBorder = C.yellow;
-                    statusLabel = minsUntil < 60 ? "in " + minsUntil + "m" : "in 1h";
-                  } else if (minsUntil > -60) {
-                    tColor = C.red; tBg = C.redFaint; tBorder = C.red;
-                    statusLabel = Math.abs(minsUntil) + "m ago";
-                  } else {
-                    tColor = C.muted; tBg = "transparent"; tBorder = C.border;
-                    statusLabel = Math.floor(Math.abs(minsUntil)/60) + "h ago";
-                  }
-                  return (
-                    <div key={t} style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:4 }}>
-                      <div style={{ background:tBg,border:"1.5px solid "+tBorder,borderRadius:9,padding:"10px 18px",color:tColor,fontSize:15,fontWeight:700,transition:"all .3s" }}>{t}</div>
-                      {statusLabel && <span style={{ fontSize:12,color:tColor,fontWeight:600 }}>{statusLabel}</span>}
-                    </div>
-                  );
-                })}
-              </div>
-              <div style={{ display:"flex",gap:14,flexWrap:"wrap",marginBottom:12 }}>
-                {[
-                  { col:C.green, bg:C.greenFaint, label:"On schedule (>1h away)" },
-                  { col:C.yellow, bg:C.yellowFaint, label:"Coming up soon" },
-                  { col:C.red, bg:C.redFaint, label:"Overdue" },
-                  { col:C.muted, bg:"transparent", label:"Already passed" },
-                ].map(function(k) {
-                  return (
-                    <div key={k.label} style={{ display:"flex",alignItems:"center",gap:7 }}>
-                      <div style={{ width:12,height:12,borderRadius:"50%",background:k.col,flexShrink:0 }} />
-                      <span style={{ fontSize:14,color:k.col,fontWeight:600 }}>{k.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              <p style={{ color:C.text,fontSize:15,fontWeight:500 }}>Recommended: <strong style={{ color:C.accent,fontWeight:700 }}>{feeding.cups+" cup(s)"}</strong> per meal &middot; <strong style={{ color:C.accent,fontWeight:700 }}>{feeding.times.length}</strong> meals/day</p>
-            </div>
-          </div>
-          <div>
-            <p className="sectionLabel" style={{ color:C.blue }}>Outdoor Breaks</p>
-            <div style={{ background:C.card,border:"1px solid "+C.accent,borderRadius:14,padding:16 }}>
-              <div style={{ display:"flex",flexWrap:"wrap",gap:8,marginBottom:14 }}>
-                {outside.map(function(t) {
-                  return <div key={t} style={{ background:C.blueFaint,border:"1px solid "+C.blue,borderRadius:9,padding:"10px 18px",color:C.blue,fontSize:15,fontWeight:700 }}>{t}</div>;
-                })}
-              </div>
-              <p style={{ color:C.text,fontSize:15,fontWeight:500 }}><strong style={{ color:C.accent,fontWeight:700 }}>{outside.length}</strong> recommended outings daily</p>
-            </div>
-          </div>
-        </div>
-      )}
+      {activeTab === "schedule" && <ScheduleTab dog={dog} onUpdate={onUpdate} allDogs={allDogs} feeding={feeding} outside={outside} C={C} />}
 
       {activeTab === "food" && (
         <div className="fadeIn">
@@ -5167,7 +5656,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
       {/* Header */}
       <div style={{ marginBottom:20 }}>
         <h2 style={{ fontFamily:"Fraunces",fontSize:30,fontWeight:800,color:C.text,marginBottom:4 }}>🏆 Trainer Profile</h2>
-        <p style={{ color:C.muted,fontSize:14 }}>Earn points by caring for your dogs. Spend them in the store.</p>
+        <p style={{ color:C.muted,fontSize:16 }}>Earn points by caring for your dogs. Spend them in the store.</p>
       </div>
 
       {/* Points Balance Card */}
@@ -5210,7 +5699,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
                 <span style={{ fontSize:24,flexShrink:0 }}>{completed ? "✅" : m.icon}</span>
                 <div style={{ flex:1,minWidth:0 }}>
                   <p style={{ fontSize:14,fontWeight:700,color:completed?C.accent:C.text }}>{m.label}</p>
-                  <p style={{ fontSize:13,color:C.muted }}>{m.desc}</p>
+                  <p style={{ fontSize:15,color:C.muted }}>{m.desc}</p>
                 </div>
                 <span style={{ fontSize:14,fontWeight:800,color:completed?C.accent:C.muted,flexShrink:0 }}>{completed ? "Earned!" : m.reward}</span>
               </div>
@@ -5231,7 +5720,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
             <div key={s.label} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:"12px 8px",textAlign:"center" }}>
               <div style={{ fontSize:20,marginBottom:4 }}>{s.icon}</div>
               <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:900,color:C.accent }}>{s.val}</p>
-              <p style={{ fontSize:13,color:C.muted,fontWeight:700 }}>{s.label}</p>
+              <p style={{ fontSize:15,color:C.muted,fontWeight:700 }}>{s.label}</p>
             </div>
           );
         })}
@@ -5240,18 +5729,25 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
       {/* Referral Code Card */}
       {referralCode && (
         <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:16,marginBottom:16 }}>
-          <p style={{ fontSize:13,fontWeight:800,color:C.text,marginBottom:4 }}>🎁 Your Referral Code</p>
-          <p style={{ fontSize:14,color:C.muted,marginBottom:10 }}>Share this code with friends. You earn 250 TP when they sign up!</p>
-          <div style={{ display:"flex",gap:10,alignItems:"center" }}>
+          <p style={{ fontSize:15,fontWeight:800,color:C.text,marginBottom:4 }}>🎁 Your Referral Code</p>
+          <p style={{ fontSize:15,color:C.muted,marginBottom:10 }}>When referral rewards launch, you'll earn 250 TP for every friend who signs up with your code!</p>
+          <div style={{ display:"flex",gap:10,alignItems:"center",marginBottom:12 }}>
             <div style={{ flex:1,background:C.bg,border:"1.5px solid "+C.accent,borderRadius:10,padding:"12px 16px",fontFamily:"monospace",fontSize:18,fontWeight:800,color:C.accent,letterSpacing:".15em",textAlign:"center" }}>
               {referralCode}
             </div>
             <button onClick={copyReferralCode}
-              style={{ background:copied?C.green:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0,transition:"background .2s" }}>
+              style={{ background:copied?C.green:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer",flexShrink:0,transition:"background .2s" }}>
               {copied ? "✓ Copied!" : "Copy"}
             </button>
           </div>
-          {referralCount > 0 && <p style={{ fontSize:12,color:C.accent,fontWeight:700,marginTop:8 }}>🎉 {referralCount} friend{referralCount !== 1 ? "s" : ""} joined using your code!</p>}
+          <div style={{ background:"linear-gradient(135deg,#1a1a2e,#16213e)",border:"1px solid rgba(82,201,125,0.35)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10 }}>
+            <span style={{ fontSize:16,marginTop:1 }}>🚧</span>
+            <div>
+              <p style={{ fontSize:14,fontWeight:700,color:"#52c97d",margin:"0 0 2px" }}>Referral rewards coming soon</p>
+              <p style={{ fontSize:13,color:"rgba(255,255,255,0.55)",margin:0,lineHeight:1.5 }}>TP bonuses activate when payments go live. Share your code now so you get credit from day one!</p>
+            </div>
+          </div>
+          {referralCount > 0 && <p style={{ fontSize:13,color:C.accent,fontWeight:700,marginTop:10 }}>🎉 {referralCount} friend{referralCount !== 1 ? "s" : ""} already used your code!</p>}
         </div>
       )}
 
@@ -5450,10 +5946,10 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
                 style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer" }}>✕</button>
             </div>
             <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:12,padding:12,marginBottom:16,textAlign:"center" }}>
-              <p style={{ fontSize:13,color:C.muted,fontWeight:600 }}>Your Balance</p>
+              <p style={{ fontSize:15,color:C.muted,fontWeight:600 }}>Your Balance</p>
               <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:C.accent }}>{tp.toLocaleString()} TP</p>
             </div>
-            <p style={{ fontSize:13,color:C.muted,marginBottom:16,textAlign:"center" }}>🚧 Store coming soon! Earn points now and spend them when we launch.</p>
+            <p style={{ fontSize:15,color:C.muted,marginBottom:16,textAlign:"center" }}>🚧 Store coming soon! Earn points now and spend them when we launch.</p>
             <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
               {STORE_ITEMS.map(function(item){
                 var affordable = tp >= item.points;
@@ -5462,17 +5958,17 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
                     <div style={{ fontSize:32,flexShrink:0 }}>{item.icon}</div>
                     <div style={{ flex:1 }}>
                       <p style={{ fontWeight:700,fontSize:14,color:C.text }}>{item.name}</p>
-                      <p style={{ fontSize:14,color:C.muted }}>{item.desc} · {item.category}</p>
+                      <p style={{ fontSize:15,color:C.muted }}>{item.desc} · {item.category}</p>
                     </div>
                     <div style={{ textAlign:"right",flexShrink:0 }}>
                       <p style={{ fontWeight:800,fontSize:14,color:affordable?C.accent:C.muted }}>{item.points.toLocaleString()} TP</p>
-                      {affordable && <p style={{ fontSize:11,color:C.accent,fontWeight:700 }}>✓ Affordable</p>}
+                      {affordable && <p style={{ fontSize:13,color:C.accent,fontWeight:700 }}>✓ Affordable</p>}
                     </div>
                   </div>
                 );
               })}
             </div>
-            <p style={{ fontSize:14,color:C.muted,textAlign:"center",marginTop:16,lineHeight:1.5 }}>Items will be available to redeem when the store officially launches. Keep earning!</p>
+            <p style={{ fontSize:15,color:C.muted,textAlign:"center",marginTop:16,lineHeight:1.5 }}>Items will be available to redeem when the store officially launches. Keep earning!</p>
           </div>
         </div>
       )}
@@ -7974,7 +8470,7 @@ export default function PawTraks() {
           </div>
 
           {/* Mobile content area */}
-          <div style={{ flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch" }}>
+          <div style={{ flex:1,overflowY:"auto",WebkitOverflowScrolling:"touch",paddingBottom:"80px" }}>
 
             {/* Dogs list screen */}
             {!activeDog && mobileNav === "dogs" && (
