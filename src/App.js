@@ -6898,6 +6898,19 @@ function AdminDashboard({ onExit }) {
                     style={{ flex:1,minWidth:100,background:C.blueFaint,border:"1px solid "+C.blue,color:C.blue,borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
                     🔑 Reset Password
                   </button>
+                  <button onClick={function(){
+                    var all = JSON.parse(localStorage.getItem("pt_users")||"{}");
+                    if (all[u.email]) {
+                      all[u.email].tier = "free";
+                      all[u.email].bypassTier = false;
+                      localStorage.setItem("pt_users", JSON.stringify(all));
+                      setRefresh(function(r){ return r+1; });
+                      if (selectedUser && selectedUser.email === u.email) setSelectedUser(all[u.email]);
+                    }
+                  }}
+                    style={{ flex:1,minWidth:80,background:C.accentFaint,border:"1px solid "+C.accent,color:C.accent,borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+                    🔄 Reset Tier
+                  </button>
                   <button onClick={function(){ setConfirmBan(u); }}
                     style={{ flex:1,minWidth:80,background:u.banned?C.greenFaint:C.redFaint,border:"1px solid "+(u.banned?C.green:C.red),color:u.banned?C.green:C.red,borderRadius:8,padding:"8px 10px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
                     {u.banned?"🔓 Unban":"🔒 Ban"}
