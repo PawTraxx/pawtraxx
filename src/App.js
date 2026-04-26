@@ -572,125 +572,83 @@ function formatAge(age) {
 // TIER SYSTEM - Progressive with Action Limits (Hybrid Model)
 // ═══════════════════════════════════════════════════════════════
 
+// ─── DEV BYPASS CODE ─────────────────────────────────────────────────────────
+var DEV_BYPASS_CODE = "PAWDEV2026";
+
+// ─── TIER DEFINITIONS ────────────────────────────────────────────────────────
 var TIER_DEFINITIONS = {
   free: {
     name: "Free",
-    price: 0,
-    priceAnnual: 0,
-    displayPrice: "$0",
-    icon: "🆓",
+    monthlyPrice: 0,
+    annualPrice: 0,
+    displayMonthly: "Free",
+    displayAnnual: "Free",
+    icon: "🐾",
     color: "#94a3b8",
     maxDogs: 1,
-    actionsPerWeek: 15,
-    logRetentionDays: 30,
-    maxTP: 100,
-    documentStorageMB: 0,
-    features: {
-      medications: false,
-      heatTracking: false,
-      documents: false,
-      export: false,
-      packBadges: false,
-      notifications: false
-    },
-    allowedBadgeTiers: [1]
+    allowedBadgeTiers: ["free"],
+    features: [
+      "1 dog profile",
+      "Daily care logging",
+      "Basic activity log",
+      "Core badges",
+      "Trainer Points"
+    ]
   },
-  daily: {
-    name: "Daily",
-    price: 2.99,
-    priceAnnual: 29.99,
-    displayPrice: "$2.99/mo",
-    icon: "📅",
-    color: "#3b82f6",
-    maxDogs: 1,
-    actionsPerWeek: Infinity,
-    logRetentionDays: 180,
-    maxTP: 250,
-    documentStorageMB: 0,
-    features: {
-      medications: false,
-      heatTracking: false,
-      documents: false,
-      export: false,
-      packBadges: false,
-      notifications: false
-    },
-    allowedBadgeTiers: [1, 2]
-  },
-  pro: {
-    name: "Pro",
-    price: 6.99,
-    priceAnnual: 69.99,
-    displayPrice: "$6.99/mo",
+  plus: {
+    name: "Plus",
+    monthlyPrice: 3.99,
+    annualPrice: 39.99,
+    displayMonthly: "$3.99/mo",
+    displayAnnual: "$39.99/yr",
     icon: "⭐",
-    color: "#8b5cf6",
-    maxDogs: 1,
-    actionsPerWeek: Infinity,
-    logRetentionDays: Infinity,
-    maxTP: Infinity,
-    documentStorageMB: 50,
-    features: {
-      medications: true,
-      heatTracking: false,
-      documents: true,
-      export: true,
-      packBadges: false,
-      notifications: false
-    },
-    allowedBadgeTiers: [1, 2, 3]
-  },
-  pack: {
-    name: "Pack",
-    price: 11.99,
-    priceAnnual: 119.99,
-    displayPrice: "$11.99/mo",
-    icon: "🐾",
-    color: "#f59e0b",
-    maxDogs: 5,
-    actionsPerWeek: Infinity,
-    logRetentionDays: Infinity,
-    maxTP: Infinity,
-    documentStorageMB: 75,
-    features: {
-      medications: true,
-      heatTracking: true,
-      documents: true,
-      export: true,
-      packBadges: true,
-      notifications: true
-    },
-    allowedBadgeTiers: [1, 2, 3, 4]
+    color: "#3b82f6",
+    maxDogs: 3,
+    allowedBadgeTiers: ["free", "plus"],
+    features: [
+      "Up to 3 dog profiles",
+      "Everything in Free",
+      "Plus-exclusive badges",
+      "Full activity history",
+      "Health records & docs"
+    ]
   },
   elite: {
     name: "Elite",
-    price: 24.99,
-    priceAnnual: 249.99,
-    displayPrice: "$24.99/mo",
+    monthlyPrice: 7.99,
+    annualPrice: 79.99,
+    displayMonthly: "$7.99/mo",
+    displayAnnual: "$79.99/yr",
     icon: "👑",
-    color: "#ec4899",
+    color: "#f4a24d",
     maxDogs: Infinity,
-    actionsPerWeek: Infinity,
-    logRetentionDays: Infinity,
-    maxTP: Infinity,
-    documentStorageMB: 500,
-    features: {
-      medications: true,
-      heatTracking: true,
-      documents: true,
-      export: true,
-      packBadges: true,
-      notifications: true,
-      analytics: true,
-      apiAccess: true,
-      whiteLabel: true
-    },
-    allowedBadgeTiers: [1, 2, 3, 4]
+    allowedBadgeTiers: ["free", "plus", "elite"],
+    features: [
+      "Unlimited dog profiles",
+      "Everything in Plus",
+      "Elite-exclusive badges",
+      "Elite member badge",
+      "Priority support"
+    ]
   }
 };
 
 // get tier config
 function getTierConfig(tier) {
   return TIER_DEFINITIONS[tier] || TIER_DEFINITIONS.free;
+}
+
+// Check if user's tier can access a badge tier label
+function canAccessBadgeTier(userTier, badgeTierLabel) {
+  var config = getTierConfig(userTier);
+  return (config.allowedBadgeTiers || ["free"]).indexOf(badgeTierLabel) !== -1;
+}
+
+// Get the required subscription tier for a badge tier label
+function requiredSubForBadge(badgeTierLabel) {
+  if (badgeTierLabel === "plus") return "plus";
+  if (badgeTierLabel === "elite") return "elite";
+  return null;
 }
 
 // check feature access
@@ -3546,23 +3504,23 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🍽️  FEEDING — Easy → Legendary
   // ════════════════════════════════════════
-  { id:"first_feed", tier:1, icon:"🍽️", name:"First Meal", desc:"Log your very first feeding", color:"green",
+  { id:"first_feed", tier:1, badgeTier:"free", icon:"🍽️", name:"First Meal", desc:"Log your very first feeding", color:"green",
     check: function(dog) { return (dog.activityLog||[]).some(function(e){ return e.type==="fed"; }); } },
-  { id:"feed_5", tier:1, icon:"🥣", name:"Consistent Feeder", desc:"Log 5 feedings", color:"green",
+  { id:"feed_5", tier:1, badgeTier:"free", icon:"🥣", name:"Consistent Feeder", desc:"Log 5 feedings", color:"green",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 5; } },
-  { id:"feed_25", tier:2, icon:"👨‍🍳", name:"Top Chef", desc:"Log 25 feedings", color:"green",
+  { id:"feed_25", tier:2, badgeTier:"plus", icon:"👨‍🍳", name:"Top Chef", desc:"Log 25 feedings", color:"green",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 25; } },
-  { id:"feed_100", tier:3, icon:"⭐", name:"Master Chef", desc:"Log 100 feedings", color:"accent",
+  { id:"feed_100", tier:3, badgeTier:"elite", icon:"⭐", name:"Master Chef", desc:"Log 100 feedings", color:"accent",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 100; } },
-  { id:"feed_365", tier:4, icon:"👑", name:"Iron Chef", desc:"Log 365 feedings — a full year of meals", color:"yellow",
+  { id:"feed_365", tier:4, badgeTier:"elite", icon:"👑", name:"Iron Chef", desc:"Log 365 feedings — a full year of meals", color:"yellow",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 365; } },
 
   // ════════════════════════════════════════
   // 🌿  OUTDOOR — Easy → Legendary
   // ════════════════════════════════════════
-  { id:"first_outside", tier:1, icon:"🌿", name:"Fresh Air", desc:"Take your dog outside for the first time", color:"blue",
+  { id:"first_outside", tier:1, badgeTier:"free", icon:"🌿", name:"Fresh Air", desc:"Take your dog outside for the first time", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).some(function(e){ return e.type==="outside"; }); } },
-  { id:"outside_10", tier:1, icon:"🏃", name:"Active Pup", desc:"Log 10 outdoor trips spread over at least 3 days", color:"blue",
+  { id:"outside_10", tier:1, badgeTier:"plus", icon:"🏃", name:"Active Pup", desc:"Log 10 outdoor trips spread over at least 3 days", color:"blue",
     check: function(dog) { 
       var outLogs = (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; });
       if (outLogs.length < 10) return false;
@@ -3574,13 +3532,13 @@ const BADGE_DEFS = [
       });
       return Object.keys(uniqueDays).length >= 3;
     } },
-  { id:"outside_50", tier:2, icon:"🌳", name:"Trail Blazer", desc:"Log 50 outdoor trips", color:"blue",
+  { id:"outside_50", tier:2, badgeTier:"plus", icon:"🌳", name:"Trail Blazer", desc:"Log 50 outdoor trips", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 50; } },
-  { id:"outside_200", tier:3, icon:"🗺️", name:"Adventurer", desc:"Log 200 outdoor trips", color:"blue",
+  { id:"outside_200", tier:3, badgeTier:"elite", icon:"🗺️", name:"Adventurer", desc:"Log 200 outdoor trips", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 200; } },
-  { id:"outside_500", tier:4, icon:"🧭", name:"Explorer Extraordinaire", desc:"Log 500 outdoor trips — a true adventurer", color:"accent",
+  { id:"outside_500", tier:4, badgeTier:"elite", icon:"🧭", name:"Explorer Extraordinaire", desc:"Log 500 outdoor trips — a true adventurer", color:"accent",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 500; } },
-  { id:"outside_both_same_day", tier:2, icon:"☀️", name:"Full Day Out", desc:"Log both a feeding and 3 outdoor trips on the same day", color:"blue",
+  { id:"outside_both_same_day", tier:2, badgeTier:"plus", icon:"☀️", name:"Full Day Out", desc:"Log both a feeding and 3 outdoor trips on the same day", color:"blue",
     check: function(dog) {
       var log = dog.activityLog || [];
       var byDay = {};
@@ -3596,25 +3554,25 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🔥  STREAKS — Medium → Legendary
   // ════════════════════════════════════════
-  { id:"streak_3", tier:1, icon:"🔥", name:"On a Roll", desc:"Log activity on 3 different calendar days", color:"red",
+  { id:"streak_3", tier:1, badgeTier:"free", icon:"🔥", name:"On a Roll", desc:"Log activity on 3 different calendar days", color:"red",
     check: function(dog) {
       var days = {};
       (dog.activityLog||[]).forEach(function(e){ days[new Date(e.timestamp).toDateString()] = true; });
       return Object.keys(days).length >= 3;
     } },
-  { id:"streak_7", tier:2, icon:"📅", name:"Week Warrior", desc:"Log activity on 7 different days", color:"red",
+  { id:"streak_7", tier:2, badgeTier:"plus", icon:"📅", name:"Week Warrior", desc:"Log activity on 7 different days", color:"red",
     check: function(dog) {
       var days = {};
       (dog.activityLog||[]).forEach(function(e){ days[new Date(e.timestamp).toDateString()] = true; });
       return Object.keys(days).length >= 7;
     } },
-  { id:"streak_30", tier:3, icon:"🗓️", name:"Monthly Devotion", desc:"Log activity on 30 different days", color:"red",
+  { id:"streak_30", tier:3, badgeTier:"plus", icon:"🗓️", name:"Monthly Devotion", desc:"Log activity on 30 different days", color:"red",
     check: function(dog) {
       var days = {};
       (dog.activityLog||[]).forEach(function(e){ days[new Date(e.timestamp).toDateString()] = true; });
       return Object.keys(days).length >= 30;
     } },
-  { id:"streak_consec_7", tier:3, icon:"⚡", name:"7-Day Streak", desc:"Log activity on 7 consecutive days in a row", color:"yellow",
+  { id:"streak_consec_7", tier:3, badgeTier:"plus", icon:"⚡", name:"7-Day Streak", desc:"Log activity on 7 consecutive days in a row", color:"yellow",
     check: function(dog) {
       var log = dog.activityLog || [];
       if (!log.length) return false;
@@ -3628,7 +3586,7 @@ const BADGE_DEFS = [
       }
       return best >= 7;
     } },
-  { id:"streak_consec_30", tier:4, icon:"🌠", name:"Iron Streak", desc:"Log activity every day for 30 consecutive days", color:"yellow",
+  { id:"streak_consec_30", tier:4, badgeTier:"elite", icon:"🌠", name:"Iron Streak", desc:"Log activity every day for 30 consecutive days", color:"yellow",
     check: function(dog) {
       var log = dog.activityLog || [];
       if (!log.length) return false;
@@ -3642,7 +3600,7 @@ const BADGE_DEFS = [
       }
       return best >= 30;
     } },
-  { id:"streak_consec_100", tier:4, icon:"💎", name:"Unstoppable", desc:"Log activity every day for 100 consecutive days", color:"accent",
+  { id:"streak_consec_100", tier:4, badgeTier:"elite", icon:"💎", name:"Unstoppable", desc:"Log activity every day for 100 consecutive days", color:"accent",
     check: function(dog) {
       var log = dog.activityLog || [];
       if (!log.length) return false;
@@ -3660,34 +3618,34 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🩺  VET CARE — Easy → Hard
   // ════════════════════════════════════════
-  { id:"first_vet", tier:1, icon:"🩺", name:"First Check-Up", desc:"Schedule your first vet appointment", color:"purple",
+  { id:"first_vet", tier:1, badgeTier:"free", icon:"🩺", name:"First Check-Up", desc:"Schedule your first vet appointment", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).length >= 1; } },
-  { id:"vet_3", tier:2, icon:"🏥", name:"Health Advocate", desc:"Schedule 3 vet appointments", color:"purple",
+  { id:"vet_3", tier:2, badgeTier:"plus", icon:"🏥", name:"Health Advocate", desc:"Schedule 3 vet appointments", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).length >= 3; } },
-  { id:"vet_10", tier:3, icon:"🩻", name:"Dedicated Patient", desc:"Schedule 10 vet appointments", color:"purple",
+  { id:"vet_10", tier:3, badgeTier:"plus", icon:"🩻", name:"Dedicated Patient", desc:"Schedule 10 vet appointments", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).length >= 10; } },
-  { id:"vet_annual", tier:3, icon:"📆", name:"Annual Care", desc:"Have a past vet visit and a future one scheduled", color:"purple",
+  { id:"vet_annual", tier:3, badgeTier:"plus", icon:"📆", name:"Annual Care", desc:"Have a past vet visit and a future one scheduled", color:"purple",
     check: function(dog) {
       var appts = dog.vetAppointments || [];
       var hasPast = appts.some(function(a){ return daysUntil(a.date) < 0; });
       var hasFuture = appts.some(function(a){ return daysUntil(a.date) >= 0; });
       return hasPast && hasFuture;
     } },
-  { id:"vet_no_overdue", tier:2, icon:"✅", name:"Always Prepared", desc:"Have a future vet appointment already scheduled", color:"green",
+  { id:"vet_no_overdue", tier:2, badgeTier:"plus", icon:"✅", name:"Always Prepared", desc:"Have a future vet appointment already scheduled", color:"green",
     check: function(dog) { return (dog.vetAppointments||[]).some(function(a){ return daysUntil(a.date) >= 0; }); } },
 
   // ════════════════════════════════════════
   // 💉  VACCINES — Easy → Hard
   // ════════════════════════════════════════
-  { id:"first_vax", tier:1, icon:"💉", name:"First Shot", desc:"Add your first vaccine record", color:"pink",
+  { id:"first_vax", tier:1, badgeTier:"free", icon:"💉", name:"First Shot", desc:"Add your first vaccine record", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).length >= 1; } },
-  { id:"vax_3", tier:2, icon:"🛡️", name:"Shielded", desc:"Add 3 or more vaccine records", color:"pink",
+  { id:"vax_3", tier:2, badgeTier:"plus", icon:"🛡️", name:"Shielded", desc:"Add 3 or more vaccine records", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).length >= 3; } },
-  { id:"vax_6", tier:3, icon:"🔰", name:"Fully Armored", desc:"Add 6 or more vaccine records", color:"pink",
+  { id:"vax_6", tier:3, badgeTier:"elite", icon:"🔰", name:"Fully Armored", desc:"Add 6 or more vaccine records", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).length >= 6; } },
-  { id:"no_overdue_vax", tier:2, icon:"🟢", name:"Up to Date", desc:"Have vaccines on file with none overdue", color:"green",
+  { id:"no_overdue_vax", tier:2, badgeTier:"plus", icon:"🟢", name:"Up to Date", desc:"Have vaccines on file with none overdue", color:"green",
     check: function(dog) { var v = dog.vaccines||[]; return v.length > 0 && !v.some(function(x){ return x.nextDate && isOverdue(x.nextDate); }); } },
-  { id:"vax_all_current_6", tier:4, icon:"🏅", name:"Vaccination Champion", desc:"Maintain 6+ vaccines all current with no overdue", color:"accent",
+  { id:"vax_all_current_6", tier:4, badgeTier:"elite", icon:"🏅", name:"Vaccination Champion", desc:"Maintain 6+ vaccines all current with no overdue", color:"accent",
     check: function(dog) {
       var v = dog.vaccines||[];
       return v.length >= 6 && !v.some(function(x){ return x.nextDate && isOverdue(x.nextDate); });
@@ -3696,23 +3654,23 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 💊  MEDICATIONS — Easy → Hard
   // ════════════════════════════════════════
-  { id:"first_med", tier:1, icon:"💊", name:"On Medication", desc:"Add your first medication", color:"purple",
+  { id:"first_med", tier:1, badgeTier:"free", icon:"💊", name:"On Medication", desc:"Add your first medication", color:"purple",
     check: function(dog) { return (dog.medications||[]).length >= 1; } },
-  { id:"med_given_10", tier:2, icon:"💊", name:"Dose Master", desc:"Mark a single medication given 10 times", color:"purple",
+  { id:"med_given_10", tier:2, badgeTier:"plus", icon:"💊", name:"Dose Master", desc:"Mark a single medication given 10 times", color:"purple",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return (m.givenLog||[]).length >= 10; }); } },
-  { id:"med_given_50", tier:3, icon:"🧪", name:"Pharmacist", desc:"Mark a single medication given 50 times", color:"purple",
+  { id:"med_given_50", tier:3, badgeTier:"elite", icon:"🧪", name:"Pharmacist", desc:"Mark a single medication given 50 times", color:"purple",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return (m.givenLog||[]).length >= 50; }); } },
-  { id:"med_given_100", tier:4, icon:"🔬", name:"Clinical Expert", desc:"Mark a single medication given 100 times — true dedication", color:"accent",
+  { id:"med_given_100", tier:4, badgeTier:"elite", icon:"🔬", name:"Clinical Expert", desc:"Mark a single medication given 100 times — true dedication", color:"accent",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return (m.givenLog||[]).length >= 100; }); } },
-  { id:"med_3_active", tier:3, icon:"🗂️", name:"Multi-Med Manager", desc:"Track 3 active medications at once", color:"purple",
+  { id:"med_3_active", tier:3, badgeTier:"elite", icon:"🗂️", name:"Multi-Med Manager", desc:"Track 3 active medications at once", color:"purple",
     check: function(dog) { return (dog.medications||[]).filter(function(m){ return m.active; }).length >= 3; } },
 
   // ════════════════════════════════════════
   // ⚖️  WEIGHT — Easy → Hard
   // ════════════════════════════════════════
-  { id:"first_weight", tier:1, icon:"⚖️", name:"Weigh In", desc:"Log your first weight entry", color:"accent",
+  { id:"first_weight", tier:1, badgeTier:"free", icon:"⚖️", name:"Weigh In", desc:"Log your first weight entry", color:"accent",
     check: function(dog) { return (dog.weightHistory||[]).length >= 1; } },
-  { id:"weight_5", tier:2, icon:"📊", name:"Weight Watcher", desc:"Log 5 weight entries spread over at least 5 days", color:"accent",
+  { id:"weight_5", tier:2, badgeTier:"plus", icon:"📊", name:"Weight Watcher", desc:"Log 5 weight entries spread over at least 5 days", color:"accent",
     check: function(dog) { 
       var h = (dog.weightHistory||[]).slice().sort(function(a,b){ return parseLocalDate(a.date) - parseLocalDate(b.date); });
       if (h.length < 5) return false;
@@ -3724,11 +3682,11 @@ const BADGE_DEFS = [
       });
       return Object.keys(uniqueDays).length >= 5;
     } },
-  { id:"weight_12", tier:3, icon:"📈", name:"Monthly Tracker", desc:"Log 12 weight entries — one per month for a year", color:"accent",
+  { id:"weight_12", tier:3, badgeTier:"elite", icon:"📈", name:"Monthly Tracker", desc:"Log 12 weight entries — one per month for a year", color:"accent",
     check: function(dog) { return (dog.weightHistory||[]).length >= 12; } },
-  { id:"weight_52", tier:4, icon:"🏋️", name:"Precision Keeper", desc:"Log 52 weight entries — a full year of weekly weigh-ins", color:"yellow",
+  { id:"weight_52", tier:4, badgeTier:"elite", icon:"🏋️", name:"Precision Keeper", desc:"Log 52 weight entries — a full year of weekly weigh-ins", color:"yellow",
     check: function(dog) { return (dog.weightHistory||[]).length >= 52; } },
-  { id:"weight_stable", tier:3, icon:"⚖️", name:"Healthy Weight", desc:"Log 5+ entries where no single change exceeds 5 lbs", color:"green",
+  { id:"weight_stable", tier:3, badgeTier:"elite", icon:"⚖️", name:"Healthy Weight", desc:"Log 5+ entries where no single change exceeds 5 lbs", color:"green",
     check: function(dog) {
       var h = (dog.weightHistory||[]).slice().sort(function(a,b){ return parseLocalDate(a.date) - parseLocalDate(b.date); });
       if (h.length < 5) return false;
@@ -3741,13 +3699,13 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 📸  PROFILE & SETUP — Easy
   // ════════════════════════════════════════
-  { id:"profile_photo", tier:1, icon:"📸", name:"Picture Perfect", desc:"Upload a photo of your dog", color:"pink",
+  { id:"profile_photo", tier:1, badgeTier:"free", icon:"📸", name:"Picture Perfect", desc:"Upload a photo of your dog", color:"pink",
     check: function(dog) { return !!dog.photo; } },
-  { id:"full_profile", tier:1, icon:"📋", name:"All About Me", desc:"Fill in breed, age, weight, and gender", color:"blue",
+  { id:"full_profile", tier:1, badgeTier:"free", icon:"📋", name:"All About Me", desc:"Fill in breed, age, weight, and gender", color:"blue",
     check: function(dog) { return !!(dog.breed && dog.age && dog.weight && dog.gender); } },
-  { id:"notes_added", tier:1, icon:"📝", name:"Story Teller", desc:"Write notes about your dog", color:"blue",
+  { id:"notes_added", tier:1, badgeTier:"free", icon:"📝", name:"Story Teller", desc:"Write notes about your dog", color:"blue",
     check: function(dog) { return !!(dog.notes && dog.notes.trim().length > 10); } },
-  { id:"dob_set", tier:1, icon:"🎂", name:"Birthday Pup", desc:"Celebrate when it's your dog's birthday!", color:"pink",
+  { id:"dob_set", tier:1, badgeTier:"free", icon:"🎂", name:"Birthday Pup", desc:"Celebrate when it's your dog's birthday!", color:"pink",
     check: function(dog) { 
       if (!dog.dob) return false;
       var dob = parseLocalDate(dog.dob);
@@ -3755,15 +3713,15 @@ const BADGE_DEFS = [
       // Check if month and day match (it's their birthday today)
       return dob.getMonth() === today.getMonth() && dob.getDate() === today.getDate();
     } },
-  { id:"full_setup", tier:2, icon:"🌟", name:"Complete Care Profile", desc:"Have a photo, notes, DOB, breed, age, and weight filled in", color:"accent",
+  { id:"full_setup", tier:2, badgeTier:"plus", icon:"🌟", name:"Complete Care Profile", desc:"Have a photo, notes, DOB, breed, age, and weight filled in", color:"accent",
     check: function(dog) { return !!(dog.photo && dog.notes && dog.dob && dog.breed && dog.age && dog.weight); } },
 
   // ════════════════════════════════════════
   // 🌸  HEAT TRACKING
   // ════════════════════════════════════════
-  { id:"heat_tracked", tier:1, icon:"🌸", name:"Cycle Aware", desc:"Set a heat cycle date for a female dog", color:"pink",
+  { id:"heat_tracked", tier:1, badgeTier:"free", icon:"🌸", name:"Cycle Aware", desc:"Set a heat cycle date for a female dog", color:"pink",
     check: function(dog) { return dog.gender === "female" && !!dog.lastHeatDate; } },
-  { id:"heat_planned", tier:2, icon:"🗓️", name:"Cycle Planner", desc:"Track a female dog's heat with a future estimated date", color:"pink",
+  { id:"heat_planned", tier:2, badgeTier:"plus", icon:"🗓️", name:"Cycle Planner", desc:"Track a female dog's heat with a future estimated date", color:"pink",
     check: function(dog) {
       if (dog.gender !== "female" || !dog.lastHeatDate) return false;
       var h = getHeatStatus(dog);
@@ -3773,35 +3731,35 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🐾  PACK SIZE — Easy → Legendary
   // ════════════════════════════════════════
-  { id:"two_dogs", tier:1, icon:"🐕‍🦺", name:"Dynamic Duo", desc:"Add 2 or more dogs to your pack", color:"accent",
+  { id:"two_dogs", tier:1, badgeTier:"free", icon:"🐕‍🦺", name:"Dynamic Duo", desc:"Add 2 or more dogs to your pack", color:"accent",
     check: function(dog, allDogs) { return allDogs.length >= 2; } },
-  { id:"three_dogs", tier:2, icon:"🐕", name:"The Pack", desc:"Add 3 or more dogs", color:"accent",
+  { id:"three_dogs", tier:2, badgeTier:"plus", icon:"🐕", name:"The Pack", desc:"Add 3 or more dogs", color:"accent",
     check: function(dog, allDogs) { return allDogs.length >= 3; } },
-  { id:"five_dogs", tier:3, icon:"🐾", name:"Pack Leader", desc:"Build a pack of 5 or more dogs", color:"accent",
+  { id:"five_dogs", tier:3, badgeTier:"elite", icon:"🐾", name:"Pack Leader", desc:"Build a pack of 5 or more dogs", color:"accent",
     check: function(dog, allDogs) { return allDogs.length >= 5; } },
-  { id:"ten_dogs", tier:4, icon:"🏡", name:"Kennel Master", desc:"Manage a pack of 10 or more dogs", color:"yellow",
+  { id:"ten_dogs", tier:4, badgeTier:"elite", icon:"🏡", name:"Kennel Master", desc:"Manage a pack of 10 or more dogs", color:"yellow",
     check: function(dog, allDogs) { return allDogs.length >= 10; } },
 
   // ════════════════════════════════════════
   // 🏆  MASTERY — Hard & Legendary
   // ════════════════════════════════════════
-  { id:"all_sections", tier:3, icon:"🗂️", name:"Total Care", desc:"Have data in vet, vaccines, meds, and weight for one dog", color:"accent",
+  { id:"all_sections", tier:3, badgeTier:"elite", icon:"🗂️", name:"Total Care", desc:"Have data in vet, vaccines, meds, and weight for one dog", color:"accent",
     check: function(dog) {
       return (dog.vetAppointments||[]).length > 0 && (dog.vaccines||[]).length > 0 &&
              (dog.medications||[]).length > 0 && (dog.weightHistory||[]).length > 0;
     } },
-  { id:"care_veteran", tier:4, icon:"🎖️", name:"Care Veteran", desc:"Log 50+ feedings, 50+ outdoor trips, 3+ vet visits, and 5+ weight entries", color:"accent",
+  { id:"care_veteran", tier:4, badgeTier:"elite", icon:"🎖️", name:"Care Veteran", desc:"Log 50+ feedings, 50+ outdoor trips, 3+ vet visits, and 5+ weight entries", color:"accent",
     check: function(dog) {
       var fed = (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length;
       var out = (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length;
       return fed >= 50 && out >= 50 && (dog.vetAppointments||[]).length >= 3 && (dog.weightHistory||[]).length >= 5;
     } },
-  { id:"grand_champion", tier:4, icon:"🏆", name:"Grand Champion", desc:"Earn 20 or more badges for a single dog", color:"yellow",
+  { id:"grand_champion", tier:4, badgeTier:"elite", icon:"🏆", name:"Grand Champion", desc:"Earn 20 or more badges for a single dog", color:"yellow",
     check: function(dog, allDogs) {
       var count = BADGE_DEFS.filter(function(b){ if (b.id==="grand_champion") return false; try { return !!b.check(dog, allDogs||[]); } catch(e){ return false; } }).length;
       return count >= 20;
     } },
-  { id:"the_legend", tier:4, icon:"🌠", name:"The Legend", desc:"Earn 35 or more badges for a single dog — the ultimate achievement", color:"accent",
+  { id:"the_legend", tier:4, badgeTier:"elite", icon:"🌠", name:"The Legend", desc:"Earn 35 or more badges for a single dog — the ultimate achievement", color:"accent",
     check: function(dog, allDogs) {
       var count = BADGE_DEFS.filter(function(b){ if (b.id==="the_legend"||b.id==="grand_champion") return false; try { return !!b.check(dog, allDogs||[]); } catch(e){ return false; } }).length;
       return count >= 35;
@@ -3810,19 +3768,19 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🌙  SPECIAL MOMENTS
   // ════════════════════════════════════════
-  { id:"early_bird", tier:2, icon:"🌅", name:"Early Bird", desc:"Log a feeding before 7 AM", color:"yellow",
+  { id:"early_bird", tier:2, badgeTier:"plus", icon:"🌅", name:"Early Bird", desc:"Log a feeding before 7 AM", color:"yellow",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         return e.type==="fed" && new Date(e.timestamp).getHours() < 7;
       });
     } },
-  { id:"night_owl", tier:2, icon:"🌙", name:"Night Owl", desc:"Log an outdoor trip after 10 PM", color:"purple",
+  { id:"night_owl", tier:2, badgeTier:"plus", icon:"🌙", name:"Night Owl", desc:"Log an outdoor trip after 10 PM", color:"purple",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         return e.type==="outside" && new Date(e.timestamp).getHours() >= 22;
       });
     } },
-  { id:"busy_day", tier:2, icon:"📌", name:"Busy Day", desc:"Log 4 or more activities in a single day", color:"blue",
+  { id:"busy_day", tier:2, badgeTier:"plus", icon:"📌", name:"Busy Day", desc:"Log 4 or more activities in a single day", color:"blue",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).forEach(function(e){
@@ -3831,7 +3789,7 @@ const BADGE_DEFS = [
       });
       return Object.values(byDay).some(function(n){ return n >= 4; });
     } },
-  { id:"weekend_warrior", tier:2, icon:"🎉", name:"Weekend Warrior", desc:"Log activity on both Saturday and Sunday of the same weekend", color:"green",
+  { id:"weekend_warrior", tier:2, badgeTier:"plus", icon:"🎉", name:"Weekend Warrior", desc:"Log activity on both Saturday and Sunday of the same weekend", color:"green",
     check: function(dog) {
       var log = dog.activityLog || [];
       var sats = {}, suns = {};
@@ -3843,7 +3801,7 @@ const BADGE_DEFS = [
       });
       return Object.keys(sats).some(function(w){ return suns[w]; });
     } },
-  { id:"new_year", tier:3, icon:"🎆", name:"New Year Pup", desc:"Log a feeding on January 1st", color:"accent",
+  { id:"new_year", tier:3, badgeTier:"elite", icon:"🎆", name:"New Year Pup", desc:"Log a feeding on January 1st", color:"accent",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var d = new Date(e.timestamp);
@@ -3854,7 +3812,7 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🍽️  FEEDING — More milestones
   // ════════════════════════════════════════
-  { id:"feed_10", tier:1, icon:"🥄", name:"Feeding Routine", desc:"Log 10 feedings spread over at least 3 days", color:"green",
+  { id:"feed_10", tier:1, badgeTier:"free", icon:"🥄", name:"Feeding Routine", desc:"Log 10 feedings spread over at least 3 days", color:"green",
     check: function(dog) { 
       var fedLogs = (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; });
       if (fedLogs.length < 10) return false;
@@ -3866,11 +3824,11 @@ const BADGE_DEFS = [
       });
       return Object.keys(uniqueDays).length >= 3;
     } },
-  { id:"feed_50", tier:2, icon:"🍖", name:"Steady Supplier", desc:"Log 50 feedings", color:"green",
+  { id:"feed_50", tier:2, badgeTier:"plus", icon:"🍖", name:"Steady Supplier", desc:"Log 50 feedings", color:"green",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 50; } },
-  { id:"feed_200", tier:3, icon:"🥩", name:"Gourmet Guardian", desc:"Log 200 feedings", color:"green",
+  { id:"feed_200", tier:3, badgeTier:"elite", icon:"🥩", name:"Gourmet Guardian", desc:"Log 200 feedings", color:"green",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).length >= 200; } },
-  { id:"feed_twice_day", tier:2, icon:"🕐", name:"Twice the Love", desc:"Log 2 feedings on the same day", color:"green",
+  { id:"feed_twice_day", tier:2, badgeTier:"plus", icon:"🕐", name:"Twice the Love", desc:"Log 2 feedings on the same day", color:"green",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).forEach(function(e){
@@ -3878,7 +3836,7 @@ const BADGE_DEFS = [
       });
       return Object.values(byDay).some(function(n){ return n >= 2; });
     } },
-  { id:"feed_3x_day", tier:3, icon:"🍴", name:"Full Board", desc:"Log 3 feedings in a single day", color:"green",
+  { id:"feed_3x_day", tier:3, badgeTier:"elite", icon:"🍴", name:"Full Board", desc:"Log 3 feedings in a single day", color:"green",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).filter(function(e){ return e.type==="fed"; }).forEach(function(e){
@@ -3886,7 +3844,7 @@ const BADGE_DEFS = [
       });
       return Object.values(byDay).some(function(n){ return n >= 3; });
     } },
-  { id:"midnight_snack", tier:2, icon:"🌛", name:"Midnight Snack", desc:"Log a feeding between midnight and 3 AM", color:"purple",
+  { id:"midnight_snack", tier:2, badgeTier:"plus", icon:"🌛", name:"Midnight Snack", desc:"Log a feeding between midnight and 3 AM", color:"purple",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var h = new Date(e.timestamp).getHours();
@@ -3897,35 +3855,35 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🌿  OUTDOOR — More milestones
   // ════════════════════════════════════════
-  { id:"outside_5", tier:1, icon:"🌱", name:"First Steps", desc:"Log 5 outdoor trips", color:"blue",
+  { id:"outside_5", tier:1, badgeTier:"free", icon:"🌱", name:"First Steps", desc:"Log 5 outdoor trips", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 5; } },
-  { id:"outside_25", tier:2, icon:"🍃", name:"Park Regular", desc:"Log 25 outdoor trips", color:"blue",
+  { id:"outside_25", tier:2, badgeTier:"plus", icon:"🍃", name:"Park Regular", desc:"Log 25 outdoor trips", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 25; } },
-  { id:"outside_100", tier:3, icon:"🏞️", name:"Outdoor Enthusiast", desc:"Log 100 outdoor trips", color:"blue",
+  { id:"outside_100", tier:3, badgeTier:"elite", icon:"🏞️", name:"Outdoor Enthusiast", desc:"Log 100 outdoor trips", color:"blue",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 100; } },
-  { id:"outside_1000", tier:4, icon:"🌍", name:"World Walker", desc:"Log 1000 outdoor trips — legend of the leash", color:"accent",
+  { id:"outside_1000", tier:4, badgeTier:"elite", icon:"🌍", name:"World Walker", desc:"Log 1000 outdoor trips — legend of the leash", color:"accent",
     check: function(dog) { return (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).length >= 1000; } },
-  { id:"morning_walk", tier:1, icon:"🌄", name:"Morning Walker", desc:"Take your dog outside before 8 AM", color:"yellow",
+  { id:"morning_walk", tier:1, badgeTier:"free", icon:"🌄", name:"Morning Walker", desc:"Take your dog outside before 8 AM", color:"yellow",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         return e.type==="outside" && new Date(e.timestamp).getHours() < 8;
       });
     } },
-  { id:"lunchtime_walk", tier:1, icon:"☀️", name:"Midday Roamer", desc:"Take your dog outside between 11 AM and 1 PM", color:"yellow",
+  { id:"lunchtime_walk", tier:1, badgeTier:"free", icon:"☀️", name:"Midday Roamer", desc:"Take your dog outside between 11 AM and 1 PM", color:"yellow",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var h = new Date(e.timestamp).getHours();
         return e.type==="outside" && h >= 11 && h < 13;
       });
     } },
-  { id:"evening_stroll", tier:1, icon:"🌆", name:"Evening Stroller", desc:"Take your dog outside between 6 PM and 9 PM", color:"blue",
+  { id:"evening_stroll", tier:1, badgeTier:"free", icon:"🌆", name:"Evening Stroller", desc:"Take your dog outside between 6 PM and 9 PM", color:"blue",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var h = new Date(e.timestamp).getHours();
         return e.type==="outside" && h >= 18 && h < 21;
       });
     } },
-  { id:"outdoor_5_day", tier:3, icon:"🗺️", name:"Marathon Day", desc:"Log 5 or more outdoor trips in a single day", color:"blue",
+  { id:"outdoor_5_day", tier:3, badgeTier:"elite", icon:"🗺️", name:"Marathon Day", desc:"Log 5 or more outdoor trips in a single day", color:"blue",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).filter(function(e){ return e.type==="outside"; }).forEach(function(e){
@@ -3937,13 +3895,13 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🔥  STREAKS — More
   // ════════════════════════════════════════
-  { id:"streak_14", tier:2, icon:"🗓️", name:"Fortnight Friend", desc:"Log activity on 14 different days", color:"red",
+  { id:"streak_14", tier:2, badgeTier:"plus", icon:"🗓️", name:"Fortnight Friend", desc:"Log activity on 14 different days", color:"red",
     check: function(dog) {
       var days = {};
       (dog.activityLog||[]).forEach(function(e){ days[new Date(e.timestamp).toDateString()] = true; });
       return Object.keys(days).length >= 14;
     } },
-  { id:"streak_consec_3", tier:1, icon:"🔆", name:"3-Day Habit", desc:"Log activity 3 days in a row", color:"red",
+  { id:"streak_consec_3", tier:1, badgeTier:"free", icon:"🔆", name:"3-Day Habit", desc:"Log activity 3 days in a row", color:"red",
     check: function(dog) {
       var daySet = {};
       (dog.activityLog||[]).forEach(function(e){ daySet[new Date(e.timestamp).toDateString()] = true; });
@@ -3954,7 +3912,7 @@ const BADGE_DEFS = [
       }
       return best >= 3;
     } },
-  { id:"streak_consec_14", tier:3, icon:"🌊", name:"Two-Week Streak", desc:"Log activity 14 consecutive days", color:"yellow",
+  { id:"streak_consec_14", tier:3, badgeTier:"elite", icon:"🌊", name:"Two-Week Streak", desc:"Log activity 14 consecutive days", color:"yellow",
     check: function(dog) {
       var daySet = {};
       (dog.activityLog||[]).forEach(function(e){ daySet[new Date(e.timestamp).toDateString()] = true; });
@@ -3965,7 +3923,7 @@ const BADGE_DEFS = [
       }
       return best >= 14;
     } },
-  { id:"streak_consec_60", tier:4, icon:"🔱", name:"60-Day Legend", desc:"Log activity 60 consecutive days in a row", color:"accent",
+  { id:"streak_consec_60", tier:4, badgeTier:"elite", icon:"🔱", name:"60-Day Legend", desc:"Log activity 60 consecutive days in a row", color:"accent",
     check: function(dog) {
       var daySet = {};
       (dog.activityLog||[]).forEach(function(e){ daySet[new Date(e.timestamp).toDateString()] = true; });
@@ -3980,61 +3938,61 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🩺  VET CARE — More
   // ════════════════════════════════════════
-  { id:"vet_5", tier:2, icon:"🏨", name:"Frequent Patient", desc:"Schedule 5 vet appointments", color:"purple",
+  { id:"vet_5", tier:2, badgeTier:"plus", icon:"🏨", name:"Frequent Patient", desc:"Schedule 5 vet appointments", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).length >= 5; } },
-  { id:"vet_15", tier:4, icon:"🩹", name:"Vet Regular", desc:"Schedule 15 vet appointments over time", color:"purple",
+  { id:"vet_15", tier:4, badgeTier:"plus", icon:"🩹", name:"Vet Regular", desc:"Schedule 15 vet appointments over time", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).length >= 15; } },
-  { id:"vet_reason_detail", tier:1, icon:"📋", name:"Detailed Visit", desc:"Add a vet appointment with notes filled in", color:"purple",
+  { id:"vet_reason_detail", tier:1, badgeTier:"plus", icon:"📋", name:"Detailed Visit", desc:"Add a vet appointment with notes filled in", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).some(function(a){ return a.notes && a.notes.trim().length > 5; }); } },
-  { id:"vet_named", tier:1, icon:"👨‍⚕️", name:"My Vet", desc:"Add a vet appointment with the vet's name", color:"purple",
+  { id:"vet_named", tier:1, badgeTier:"plus", icon:"👨‍⚕️", name:"My Vet", desc:"Add a vet appointment with the vet's name", color:"purple",
     check: function(dog) { return (dog.vetAppointments||[]).some(function(a){ return a.vet && a.vet.trim().length > 0; }); } },
 
   // ════════════════════════════════════════
   // 💉  VACCINES — More
   // ════════════════════════════════════════
-  { id:"vax_rabies", tier:1, icon:"🦠", name:"Rabies Protected", desc:"Log a Rabies vaccination", color:"pink",
+  { id:"vax_rabies", tier:1, badgeTier:"plus", icon:"🦠", name:"Rabies Protected", desc:"Log a Rabies vaccination", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).some(function(v){ return v.name && v.name.toLowerCase().includes("rabies"); }); } },
-  { id:"vax_dhpp", tier:1, icon:"🛡️", name:"Core Protected", desc:"Log a DHPP (Distemper/Parvo) vaccination", color:"pink",
+  { id:"vax_dhpp", tier:1, badgeTier:"plus", icon:"🛡️", name:"Core Protected", desc:"Log a DHPP (Distemper/Parvo) vaccination", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).some(function(v){ return v.name && v.name.toLowerCase().includes("dhpp"); }); } },
-  { id:"vax_notes", tier:1, icon:"📝", name:"Documented Dose", desc:"Add notes to a vaccine record (lot number, clinic, etc.)", color:"pink",
+  { id:"vax_notes", tier:1, badgeTier:"plus", icon:"📝", name:"Documented Dose", desc:"Add notes to a vaccine record (lot number, clinic, etc.)", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).some(function(v){ return v.notes && v.notes.trim().length > 3; }); } },
-  { id:"vax_4", tier:2, icon:"🔰", name:"Well Covered", desc:"Add 4 vaccine records", color:"pink",
+  { id:"vax_4", tier:2, badgeTier:"plus", icon:"🔰", name:"Well Covered", desc:"Add 4 vaccine records", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).length >= 4; } },
-  { id:"vax_next_set", tier:2, icon:"📅", name:"Booster Ready", desc:"Have 3 or more vaccines with a next-due date set", color:"pink",
+  { id:"vax_next_set", tier:2, badgeTier:"plus", icon:"📅", name:"Booster Ready", desc:"Have 3 or more vaccines with a next-due date set", color:"pink",
     check: function(dog) { return (dog.vaccines||[]).filter(function(v){ return !!v.nextDate; }).length >= 3; } },
 
   // ════════════════════════════════════════
   // 💊  MEDICATIONS — More
   // ════════════════════════════════════════
-  { id:"med_2_active", tier:2, icon:"💊", name:"Double Dose", desc:"Track 2 active medications at once", color:"purple",
+  { id:"med_2_active", tier:2, badgeTier:"plus", icon:"💊", name:"Double Dose", desc:"Track 2 active medications at once", color:"purple",
     check: function(dog) { return (dog.medications||[]).filter(function(m){ return m.active; }).length >= 2; } },
-  { id:"med_given_5", tier:1, icon:"🧴", name:"First Doses", desc:"Mark a medication given 5 times", color:"purple",
+  { id:"med_given_5", tier:1, badgeTier:"plus", icon:"🧴", name:"First Doses", desc:"Mark a medication given 5 times", color:"purple",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return (m.givenLog||[]).length >= 5; }); } },
-  { id:"med_given_25", tier:2, icon:"💉", name:"Consistent Doses", desc:"Mark a medication given 25 times", color:"purple",
+  { id:"med_given_25", tier:2, badgeTier:"plus", icon:"💉", name:"Consistent Doses", desc:"Mark a medication given 25 times", color:"purple",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return (m.givenLog||[]).length >= 25; }); } },
-  { id:"med_completed", tier:2, icon:"✅", name:"Course Complete", desc:"Mark a medication as inactive/completed", color:"green",
+  { id:"med_completed", tier:2, badgeTier:"plus", icon:"✅", name:"Course Complete", desc:"Mark a medication as inactive/completed", color:"green",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return !m.active; }); } },
-  { id:"med_prescriber", tier:1, icon:"📄", name:"Prescribed Care", desc:"Add a medication with a prescriber name filled in", color:"purple",
+  { id:"med_prescriber", tier:1, badgeTier:"plus", icon:"📄", name:"Prescribed Care", desc:"Add a medication with a prescriber name filled in", color:"purple",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return m.prescribedBy && m.prescribedBy.trim().length > 0; }); } },
-  { id:"med_heartgard", tier:1, icon:"❤️", name:"Heartworm Guard", desc:"Track a heartworm prevention medication", color:"red",
+  { id:"med_heartgard", tier:1, badgeTier:"plus", icon:"❤️", name:"Heartworm Guard", desc:"Track a heartworm prevention medication", color:"red",
     check: function(dog) { return (dog.medications||[]).some(function(m){ return m.name && (m.name.toLowerCase().includes("heartgard")||m.name.toLowerCase().includes("heartworm")||m.name.toLowerCase().includes("interceptor")); }); } },
 
   // ════════════════════════════════════════
   // ⚖️  WEIGHT — More milestones
   // ════════════════════════════════════════
-  { id:"weight_3", tier:1, icon:"📉", name:"Getting Tracked", desc:"Log 3 weight entries", color:"accent",
+  { id:"weight_3", tier:1, badgeTier:"plus", icon:"📉", name:"Getting Tracked", desc:"Log 3 weight entries", color:"accent",
     check: function(dog) { return (dog.weightHistory||[]).length >= 3; } },
-  { id:"weight_25", tier:3, icon:"📐", name:"Diligent Logger", desc:"Log 25 weight entries", color:"accent",
+  { id:"weight_25", tier:3, badgeTier:"plus", icon:"📐", name:"Diligent Logger", desc:"Log 25 weight entries", color:"accent",
     check: function(dog) { return (dog.weightHistory||[]).length >= 25; } },
-  { id:"weight_note", tier:1, icon:"🗒️", name:"Annotated Entry", desc:"Add a note to a weight entry", color:"accent",
+  { id:"weight_note", tier:1, badgeTier:"plus", icon:"🗒️", name:"Annotated Entry", desc:"Add a note to a weight entry", color:"accent",
     check: function(dog) { return (dog.weightHistory||[]).some(function(h){ return h.note && h.note.trim().length > 0; }); } },
-  { id:"weight_loss", tier:2, icon:"📉", name:"Trim & Healthy", desc:"Record a weight that is lower than a previous entry", color:"green",
+  { id:"weight_loss", tier:2, badgeTier:"plus", icon:"📉", name:"Trim & Healthy", desc:"Record a weight that is lower than a previous entry", color:"green",
     check: function(dog) {
       var h = (dog.weightHistory||[]).slice().sort(function(a,b){ return parseLocalDate(a.date) - parseLocalDate(b.date); });
       for (var i=1;i<h.length;i++) { if (h[i].weight < h[i-1].weight) return true; }
       return false;
     } },
-  { id:"weight_gain", tier:1, icon:"📈", name:"Growing Strong", desc:"Record a weight higher than a previous entry", color:"accent",
+  { id:"weight_gain", tier:1, badgeTier:"plus", icon:"📈", name:"Growing Strong", desc:"Record a weight higher than a previous entry", color:"accent",
     check: function(dog) {
       var h = (dog.weightHistory||[]).slice().sort(function(a,b){ return parseLocalDate(a.date) - parseLocalDate(b.date); });
       for (var i=1;i<h.length;i++) { if (h[i].weight > h[i-1].weight) return true; }
@@ -4044,27 +4002,27 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 📸  PROFILE & SETUP — More
   // ════════════════════════════════════════
-  { id:"long_notes", tier:2, icon:"📖", name:"Deep Thinker", desc:"Write 100+ characters in the notes field", color:"blue",
+  { id:"long_notes", tier:2, badgeTier:"plus", icon:"📖", name:"Deep Thinker", desc:"Write 100+ characters in the notes field", color:"blue",
     check: function(dog) { return !!(dog.notes && dog.notes.trim().length >= 100); } },
-  { id:"senior_dog", tier:2, icon:"🦳", name:"Golden Years", desc:"Track a dog aged 8 or older", color:"yellow",
+  { id:"senior_dog", tier:2, badgeTier:"plus", icon:"🦳", name:"Golden Years", desc:"Track a dog aged 8 or older", color:"yellow",
     check: function(dog) { return parseFloat(dog.age) >= 8; } },
-  { id:"puppy_care", tier:1, icon:"🐣", name:"Puppy Love", desc:"Track a puppy under 1 year old", color:"pink",
+  { id:"puppy_care", tier:1, badgeTier:"plus", icon:"🐣", name:"Puppy Love", desc:"Track a puppy under 1 year old", color:"pink",
     check: function(dog) { return parseFloat(dog.age) < 1 && !!dog.age; } },
-  { id:"big_dog", tier:1, icon:"🐘", name:"Big Boi", desc:"Track a dog over 80 lbs", color:"accent",
+  { id:"big_dog", tier:1, badgeTier:"plus", icon:"🐘", name:"Big Boi", desc:"Track a dog over 80 lbs", color:"accent",
     check: function(dog) { return parseFloat(dog.weight) > 80; } },
-  { id:"tiny_dog", tier:1, icon:"🐭", name:"Tiny Paws", desc:"Track a dog under 10 lbs", color:"pink",
+  { id:"tiny_dog", tier:1, badgeTier:"plus", icon:"🐭", name:"Tiny Paws", desc:"Track a dog under 10 lbs", color:"pink",
     check: function(dog) { return parseFloat(dog.weight) > 0 && parseFloat(dog.weight) < 10; } },
 
   // ════════════════════════════════════════
   // 🌸  HEAT — More
   // ════════════════════════════════════════
-  { id:"heat_day14", tier:2, icon:"💗", name:"Halfway Through", desc:"Track a heat cycle past day 14", color:"pink",
+  { id:"heat_day14", tier:2, badgeTier:"plus", icon:"💗", name:"Halfway Through", desc:"Track a heat cycle past day 14", color:"pink",
     check: function(dog) {
       if (dog.gender !== "female" || !dog.lastHeatDate) return false;
       var h = getHeatStatus(dog);
       return h && h.heatDay >= 14;
     } },
-  { id:"heat_prepared", tier:2, icon:"📦", name:"Always Ready", desc:"Track an upcoming heat cycle within 7 days", color:"pink",
+  { id:"heat_prepared", tier:2, badgeTier:"plus", icon:"📦", name:"Always Ready", desc:"Track an upcoming heat cycle within 7 days", color:"pink",
     check: function(dog) {
       if (dog.gender !== "female" || !dog.lastHeatDate) return false;
       var h = getHeatStatus(dog);
@@ -4074,18 +4032,18 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🐾  PACK — More
   // ════════════════════════════════════════
-  { id:"four_dogs", tier:2, icon:"🐕", name:"Quad Squad", desc:"Add 4 dogs to your pack", color:"accent",
+  { id:"four_dogs", tier:2, badgeTier:"plus", icon:"🐕", name:"Quad Squad", desc:"Add 4 dogs to your pack", color:"accent",
     check: function(dog, allDogs) { return allDogs.length >= 4; } },
-  { id:"mixed_gender_pack", tier:2, icon:"♾️", name:"Boys & Girls", desc:"Have at least one male and one female dog", color:"blue",
+  { id:"mixed_gender_pack", tier:2, badgeTier:"plus", icon:"♾️", name:"Boys & Girls", desc:"Have at least one male and one female dog", color:"blue",
     check: function(dog, allDogs) {
       return allDogs.some(function(d){ return d.gender==="male"; }) && allDogs.some(function(d){ return d.gender==="female"; });
     } },
-  { id:"all_dogs_fed", tier:3, icon:"🥘", name:"Fed the Pack", desc:"Have all dogs fed within the last 8 hours", color:"green",
+  { id:"all_dogs_fed", tier:3, badgeTier:"plus", icon:"🥘", name:"Fed the Pack", desc:"Have all dogs fed within the last 8 hours", color:"green",
     check: function(dog, allDogs) {
       if (allDogs.length < 2) return false;
       return allDogs.every(function(d){ return d.lastFed && (Date.now()-new Date(d.lastFed)) < 8*3600000; });
     } },
-  { id:"all_dogs_out", tier:3, icon:"🌳", name:"Pack Walk", desc:"Have all dogs taken outside within the last 6 hours", color:"blue",
+  { id:"all_dogs_out", tier:3, badgeTier:"plus", icon:"🌳", name:"Pack Walk", desc:"Have all dogs taken outside within the last 6 hours", color:"blue",
     check: function(dog, allDogs) {
       if (allDogs.length < 2) return false;
       return allDogs.every(function(d){ return d.lastOutside && (Date.now()-new Date(d.lastOutside)) < 6*3600000; });
@@ -4094,17 +4052,17 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🏆  MASTERY — More
   // ════════════════════════════════════════
-  { id:"total_100_activities", tier:2, icon:"💪", name:"Century Club", desc:"Log 100 total activities (feeding + outdoor)", color:"accent",
+  { id:"total_100_activities", tier:2, badgeTier:"plus", icon:"💪", name:"Century Club", desc:"Log 100 total activities (feeding + outdoor)", color:"accent",
     check: function(dog) { return (dog.activityLog||[]).length >= 100; } },
-  { id:"total_500_activities", tier:3, icon:"🏅", name:"Half-Thousand", desc:"Log 500 total activities", color:"yellow",
+  { id:"total_500_activities", tier:3, badgeTier:"plus", icon:"🏅", name:"Half-Thousand", desc:"Log 500 total activities", color:"yellow",
     check: function(dog) { return (dog.activityLog||[]).length >= 500; } },
-  { id:"total_1000_activities", tier:4, icon:"💫", name:"Thousand Strong", desc:"Log 1000 total activities — true dedication", color:"accent",
+  { id:"total_1000_activities", tier:4, badgeTier:"plus", icon:"💫", name:"Thousand Strong", desc:"Log 1000 total activities — true dedication", color:"accent",
     check: function(dog) { return (dog.activityLog||[]).length >= 1000; } },
-  { id:"health_trifecta", tier:3, icon:"🌈", name:"Health Trifecta", desc:"Have vaccines, medications, and vet visits all recorded", color:"green",
+  { id:"health_trifecta", tier:3, badgeTier:"plus", icon:"🌈", name:"Health Trifecta", desc:"Have vaccines, medications, and vet visits all recorded", color:"green",
     check: function(dog) {
       return (dog.vaccines||[]).length > 0 && (dog.medications||[]).length > 0 && (dog.vetAppointments||[]).length > 0;
     } },
-  { id:"perfect_day", tier:3, icon:"⭐", name:"Perfect Day", desc:"Log 2 feedings and 4 outdoor trips on the same calendar day", color:"yellow",
+  { id:"perfect_day", tier:3, badgeTier:"plus", icon:"⭐", name:"Perfect Day", desc:"Log 2 feedings and 4 outdoor trips on the same calendar day", color:"yellow",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).forEach(function(e){
@@ -4115,7 +4073,7 @@ const BADGE_DEFS = [
       });
       return Object.values(byDay).some(function(d){ return d.fed>=2 && d.out>=4; });
     } },
-  { id:"completionist", tier:4, icon:"🎯", name:"Completionist", desc:"Earn 40 or more badges for a single dog", color:"yellow",
+  { id:"completionist", tier:4, badgeTier:"plus", icon:"🎯", name:"Completionist", desc:"Earn 40 or more badges for a single dog", color:"yellow",
     check: function(dog, allDogs) {
       var count = BADGE_DEFS.filter(function(b){
         if (b.id==="completionist"||b.id==="grand_champion"||b.id==="the_legend") return false;
@@ -4127,19 +4085,19 @@ const BADGE_DEFS = [
   // ════════════════════════════════════════
   // 🎉  SEASONAL & FUN
   // ════════════════════════════════════════
-  { id:"valentines", tier:2, icon:"💝", name:"Valentine's Pup", desc:"Log a feeding on February 14th", color:"pink",
+  { id:"valentines", tier:2, badgeTier:"plus", icon:"💝", name:"Valentine's Pup", desc:"Log a feeding on February 14th", color:"pink",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var d = new Date(e.timestamp); return e.type==="fed" && d.getMonth()===1 && d.getDate()===14;
       });
     } },
-  { id:"halloween", tier:2, icon:"🎃", name:"Spooky Pup", desc:"Log activity on October 31st", color:"accent",
+  { id:"halloween", tier:2, badgeTier:"plus", icon:"🎃", name:"Spooky Pup", desc:"Log activity on October 31st", color:"accent",
     check: function(dog) {
       return (dog.activityLog||[]).some(function(e){
         var d = new Date(e.timestamp); return d.getMonth()===9 && d.getDate()===31;
       });
     } },
-  { id:"birthday", tier:3, icon:"🎂", name:"Birthday Celebrated", desc:"Log a feeding on your dog's birthday (DOB required)", color:"yellow",
+  { id:"birthday", tier:3, badgeTier:"plus", icon:"🎂", name:"Birthday Celebrated", desc:"Log a feeding on your dog's birthday (DOB required)", color:"yellow",
     check: function(dog) {
       if (!dog.dob) return false;
       var bday = new Date(dog.dob);
@@ -4149,21 +4107,21 @@ const BADGE_DEFS = [
         return d.getMonth()===bday.getMonth() && d.getDate()===bday.getDate();
       });
     } },
-  { id:"summer_days", tier:2, icon:"🏖️", name:"Summer Days", desc:"Log 10 outdoor trips in June, July, or August", color:"yellow",
+  { id:"summer_days", tier:2, badgeTier:"plus", icon:"🏖️", name:"Summer Days", desc:"Log 10 outdoor trips in June, July, or August", color:"yellow",
     check: function(dog) {
       return (dog.activityLog||[]).filter(function(e){
         var m = new Date(e.timestamp).getMonth();
         return e.type==="outside" && (m===5||m===6||m===7);
       }).length >= 10;
     } },
-  { id:"winter_walks", tier:2, icon:"❄️", name:"Winter Walker", desc:"Log 10 outdoor trips in December, January, or February", color:"blue",
+  { id:"winter_walks", tier:2, badgeTier:"plus", icon:"❄️", name:"Winter Walker", desc:"Log 10 outdoor trips in December, January, or February", color:"blue",
     check: function(dog) {
       return (dog.activityLog||[]).filter(function(e){
         var m = new Date(e.timestamp).getMonth();
         return e.type==="outside" && (m===11||m===0||m===1);
       }).length >= 10;
     } },
-  { id:"sunday_funday", tier:1, icon:"😎", name:"Sunday Funday", desc:"Log 3 or more activities on a Sunday", color:"blue",
+  { id:"sunday_funday", tier:1, badgeTier:"plus", icon:"😎", name:"Sunday Funday", desc:"Log 3 or more activities on a Sunday", color:"blue",
     check: function(dog) {
       var byDay = {};
       (dog.activityLog||[]).forEach(function(e){
@@ -4173,6 +4131,12 @@ const BADGE_DEFS = [
       });
       return Object.values(byDay).some(function(n){ return n>=3; });
     } },
+
+  // ════════════════════════════════════════
+  // 👑  ELITE EXCLUSIVE
+  // ════════════════════════════════════════
+  { id:"elite_member", tier:4, badgeTier:"elite", icon:"👑", name:"Elite Member", desc:"Exclusive badge for PawTraks Elite subscribers", color:"yellow",
+    check: function(dog, allDogs, userTier) { return userTier === "elite"; } },
 
 ];
 
@@ -4186,10 +4150,10 @@ const BADGE_COLORS = {
   red: ["#f87171","rgba(248,113,113,0.15)"],
 };
 
-function computeBadges(dog, allDogs) {
+function computeBadges(dog, allDogs, userTier) {
   return BADGE_DEFS.map(function(b) {
     var earned = false;
-    try { earned = !!b.check(dog, allDogs || []); } catch(e) {}
+    try { earned = !!b.check(dog, allDogs || [], userTier || "free"); } catch(e) {}
     return Object.assign({}, b, { earned: earned });
   });
 }
@@ -4274,12 +4238,14 @@ var TIERS = [
   { tier:4, label:"Diamond",sublabel:"True dedication", dotColor:"#a8d8ff", rimColor:"#1d6fce", ribbonA:"#6a0dad", ribbonB:"#bf5fff" },
 ];
 
-function BadgesTab({ dog, allDogs, setSelectedBadge }) {
+function BadgesTab({ dog, allDogs, setSelectedBadge, userTier, onUpgrade }) {
   var C = useTheme();
   var [showLevelTiers, setShowLevelTiers] = useState(false);
-  var badges = computeBadges(dog, allDogs);
-  var earned = badges.filter(function(b){ return b.earned; });
-  var locked = badges.filter(function(b){ return !b.earned; });
+  var ut = userTier || "free";
+  var badges = computeBadges(dog, allDogs, ut);
+  var earned = badges.filter(function(b){ return b.earned && canAccessBadgeTier(ut, b.badgeTier || "free"); });
+  var unlocked = badges.filter(function(b){ return !b.earned && canAccessBadgeTier(ut, b.badgeTier || "free"); });
+  var tierLocked = badges.filter(function(b){ return !canAccessBadgeTier(ut, b.badgeTier || "free"); });
 
 
   // Per-tier earned counts for the summary bar
@@ -4477,12 +4443,12 @@ function BadgesTab({ dog, allDogs, setSelectedBadge }) {
         </div>
       )}
 
-      {/* ── Locked section ── */}
-      {locked.length > 0 && (
-        <div>
-          <p className="sectionLabel">Still to Unlock ({locked.length})</p>
+      {/* ── Locked section (can earn, just haven't yet) ── */}
+      {unlocked.length > 0 && (
+        <div style={{ marginBottom:26 }}>
+          <p className="sectionLabel">Still to Unlock ({unlocked.length})</p>
           {TIERS.map(function(t){
-            var group = locked.filter(function(b){ return b.tier === t.tier; });
+            var group = unlocked.filter(function(b){ return b.tier === t.tier; });
             if (!group.length) return null;
             return (
               <div key={t.tier} style={{ marginBottom:18 }}>
@@ -4493,6 +4459,51 @@ function BadgesTab({ dog, allDogs, setSelectedBadge }) {
                 </div>
                 <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10 }}>
                   {group.map(function(b){ return BadgeCard(b, false); })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── Tier-locked badges (require upgrade) ── */}
+      {tierLocked.length > 0 && (
+        <div style={{ marginBottom:26 }}>
+          <p className="sectionLabel" style={{ color:C.muted }}>🔒 Requires Upgrade ({tierLocked.length})</p>
+          {["plus","elite"].map(function(tierLabel){
+            var group = tierLocked.filter(function(b){ return (b.badgeTier||"free") === tierLabel; });
+            if (!group.length) return null;
+            var tierColor = tierLabel === "elite" ? "#f4a24d" : "#3b82f6";
+            var tierName = tierLabel === "elite" ? "Elite" : "Plus";
+            return (
+              <div key={tierLabel} style={{ marginBottom:18 }}>
+                <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8 }}>
+                  <div style={{ display:"flex",alignItems:"center",gap:8 }}>
+                    <span style={{ fontSize:16 }}>{tierLabel === "elite" ? "👑" : "⭐"}</span>
+                    <span style={{ fontSize:15,fontWeight:800,color:tierColor,textTransform:"uppercase",letterSpacing:".07em" }}>{tierName} Exclusive</span>
+                    <span style={{ fontSize:13,color:C.muted,fontWeight:600 }}>— {group.length} badges</span>
+                  </div>
+                  <button onClick={function(){ if(onUpgrade) onUpgrade(tierLabel); }}
+                    style={{ background:tierColor,border:"none",color:"#fff",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+                    Upgrade to {tierName}
+                  </button>
+                </div>
+                <div style={{ display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(150px,1fr))",gap:10 }}>
+                  {group.map(function(b){
+                    var col = BADGE_COLORS[b.color] || BADGE_COLORS.accent;
+                    return (
+                      <div key={b.id} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:"14px 12px",opacity:0.55,position:"relative",cursor:"pointer" }}
+                        onClick={function(){ if(onUpgrade) onUpgrade(tierLabel); }}>
+                        <div style={{ position:"absolute",top:8,right:8,fontSize:14 }}>🔒</div>
+                        <div style={{ fontSize:28,marginBottom:6,filter:"grayscale(1)" }}>{b.icon}</div>
+                        <p style={{ fontWeight:700,fontSize:13,color:C.muted,marginBottom:3 }}>{b.name}</p>
+                        <p style={{ fontSize:11,color:C.muted,lineHeight:1.4 }}>{b.desc}</p>
+                        <div style={{ marginTop:8,background:tierColor+"22",border:"1px solid "+tierColor+"44",borderRadius:6,padding:"3px 8px",display:"inline-block" }}>
+                          <span style={{ fontSize:11,fontWeight:700,color:tierColor }}>{tierName} only</span>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
@@ -4566,7 +4577,7 @@ function LogDayGroup({ day, entries, C, dog, onUpdate, setConfirmDialog }) {
   );
 }
 
-function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setActiveTab, focusedSection, setFocusedSection, setSelectedBadge, earnTP, setCooldownAlert }) {
+function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setActiveTab, focusedSection, setFocusedSection, setSelectedBadge, earnTP, setCooldownAlert, userTier, onUpgrade }) {
   var C = useTheme();
   var tabBarRef = useRef(null);
   var [confirmDialog, setConfirmDialog] = useState({ show: false, title: "", message: "", onConfirm: null });
@@ -4700,7 +4711,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
             {soonVax.length>0 && <Chip color="yellow">Vaccine Due Soon</Chip>}
             {activeMeds.length>0 && <Chip color="purple">{activeMeds.length+" Med"+(activeMeds.length>1?"s":"")}</Chip>}
             {nextAppt && <Chip color="blue">{"Vet Appt "+fmtDate(nextAppt.date)}</Chip>}
-            {(function(){ var earned = computeBadges(dog, allDogs||[]).filter(function(b){ return b.earned; }).length; return earned > 0 ? <span style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"4px 12px",borderRadius:99,fontSize:14,fontWeight:800,background:C.accentFaint,color:C.accent }}>{"🏆 "+earned+" Badge"+(earned!==1?"s":"")}</span> : null; })()}
+            {(function(){ var earned = computeBadges(dog, allDogs||[], userTier).filter(function(b){ return b.earned; }).length; return earned > 0 ? <span style={{ display:"inline-flex",alignItems:"center",gap:4,padding:"4px 12px",borderRadius:99,fontSize:14,fontWeight:800,background:C.accentFaint,color:C.accent }}>{"🏆 "+earned+" Badge"+(earned!==1?"s":"")}</span> : null; })()}
           </div>
         </div>
         <div style={{ display:"flex",flexDirection:"column",gap:7,flexShrink:0 }}>
@@ -4733,7 +4744,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>🍽️</div>
           <div style={{ fontWeight:600,fontSize:13,marginTop:4 }}>Gave Food</div>
           <div style={{ fontSize:11,color:C.green,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastFed)}</div>
-          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+0.5 TP</div>
+          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>{"+"+TP_VALUES.food+" TP"}</div>
         </button>
         <button onClick={function(){
           var cooldownTimestamps = dog.cooldownTimestamps || {};
@@ -4758,7 +4769,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>💧</div>
           <div style={{ fontWeight:600,fontSize:13,marginTop:4 }}>Gave Water</div>
           <div style={{ fontSize:11,color:C.blue,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastWater)}</div>
-          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+0.5 TP</div>
+          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>{"+"+TP_VALUES.water+" TP"}</div>
         </button>
         <button onClick={function(){
           var cooldownTimestamps = dog.cooldownTimestamps || {};
@@ -4789,7 +4800,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
           <div style={{ fontSize:20 }}>🌳</div>
           <div style={{ fontWeight:600,fontSize:13,marginTop:4 }}>Taken Outside</div>
           <div style={{ fontSize:11,color:C.accent,marginTop:2,fontWeight:600 }}>{"Last: "+timeAgo(dog.lastOutside)}</div>
-          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>+1 TP</div>
+          <div style={{ fontSize:10,color:C.muted,marginTop:1 }}>{"+"+TP_VALUES.outside+" TP"}</div>
         </button>
       </div>
 
@@ -5072,7 +5083,7 @@ function DogDetail({ dog, onUpdate, onDelete, allDogs, onEdit, activeTab, setAct
         </div>
       )}
 
-      {activeTab === "badges" && <BadgesTab dog={dog} allDogs={allDogs} setSelectedBadge={setSelectedBadge} />}
+      {activeTab === "badges" && <BadgesTab dog={dog} allDogs={allDogs} setSelectedBadge={setSelectedBadge} userTier={userTier} onUpgrade={onUpgrade} />}
 
       {activeTab === "documents" && <DocumentsTab dog={dog} onUpdate={onUpdate} onBack={function(){ setActiveTab("overview"); }} />}
 
@@ -5121,7 +5132,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
 
   // Per-dog stats
   var dogStats = dogs.map(function(d) {
-    var b = computeBadges(d, dogs);
+    var b = computeBadges(d, dogs, (user&&user.tier)||"free");
     var earned = b.filter(function(x){ return x.earned; }).length;
     var log = d.activityLog || [];
     var today = new Date().toDateString();
@@ -5928,7 +5939,7 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
 
   // Build full per-dog badge breakdown for modal
   var packBadgeData = dogs.map(function(d){
-    var b = computeBadges(d, dogs);
+    var b = computeBadges(d, dogs, "free");
     return { dog:d, earned:b.filter(function(x){ return x.earned; }), total:b.length };
   }).filter(function(x){ return x.earned.length > 0; });
 
@@ -7224,6 +7235,10 @@ export default function PawTraks() {
   var [cooldownAlert, setCooldownAlert] = useState({ show: false, message: "", remaining: "" });
   var [upgradeModal, setUpgradeModal] = useState({ show: false, feature: "", recommendedTier: "", context: {} });
   var [showPricing, setShowPricing] = useState(false);
+  var [pricingBilling, setPricingBilling] = useState("monthly");
+  var [pricingBypassInput, setPricingBypassInput] = useState("");
+  var [pricingShowBypass, setPricingShowBypass] = useState(false);
+  var [pricingTapCount, setPricingTapCount] = useState(0);
   var [mobileNav, setMobileNav] = useState("board"); // "dogs" | "board" | "trainer" | "profile"
   var [showMobileMenu, setShowMobileMenu] = useState(false);
   var [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -7660,7 +7675,19 @@ export default function PawTraks() {
       }).catch(function(){});
     }
   }
-  function addDog(dog) { if(dogs.length>=100){alert("Max 100 dogs.");return;} persist(dogs.concat([dog])); setShowAdd(false); setActiveDog(dog); earnTP(TP_VALUES.add_dog, "Added a new dog: "+dog.name); }
+  function addDog(dog) {
+    var tier = (user && user.tier) || "free";
+    var maxDogs = getTierConfig(tier).maxDogs;
+    if (dogs.length >= maxDogs) {
+      setShowAdd(false);
+      setShowPricing(true);
+      return;
+    }
+    persist(dogs.concat([dog]));
+    setShowAdd(false);
+    setActiveDog(dog);
+    earnTP(TP_VALUES.add_dog, "Added a new dog: "+dog.name);
+  }
   var updateDog = useCallback(function(upd) {
     // Read fresh from localStorage to avoid stale closure
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
@@ -7998,7 +8025,7 @@ export default function PawTraks() {
             {/* Dog detail */}
             {activeDog && (
               <div className="fadeIn" style={{ padding:"8px 12px 100px" }}>
-                <DogDetail dog={activeDog} onUpdate={updateDog} onDelete={function(id){ deleteDog(id); setMobileNav("dogs"); }} allDogs={dogs} onEdit={function(){ setShowEditDog(true); }} activeTab={activeTab} setActiveTab={setActiveTab} focusedSection={focusedSection} setFocusedSection={setFocusedSection} setSelectedBadge={setSelectedBadge} earnTP={earnTP} setCooldownAlert={setCooldownAlert} />
+                <DogDetail dog={activeDog} onUpdate={updateDog} onDelete={function(id){ deleteDog(id); setMobileNav("dogs"); }} allDogs={dogs} onEdit={function(){ setShowEditDog(true); }} activeTab={activeTab} setActiveTab={setActiveTab} focusedSection={focusedSection} setFocusedSection={setFocusedSection} setSelectedBadge={setSelectedBadge} earnTP={earnTP} setCooldownAlert={setCooldownAlert} userTier={(user&&user.tier)||"free"} onUpgrade={function(t){ setShowPricing(true); }} />
               </div>
             )}
           </div>
@@ -8015,7 +8042,12 @@ export default function PawTraks() {
               ].map(function(item) {
                 if (item.special) {
                   return (
-                    <button key="add" onClick={function(){ setShowAdd(true); }}
+                    <button key="add" onClick={function(){
+                      var tier = (user && user.tier) || "free";
+                      var maxDogs = getTierConfig(tier).maxDogs;
+                      if (dogs.length >= maxDogs) { setShowPricing(true); return; }
+                      setShowAdd(true);
+                    }}
                       style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer",WebkitTapHighlightColor:"transparent" }}>
                       <div style={{ width:44,height:44,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:26,fontWeight:300,lineHeight:1,marginBottom:0,boxShadow:"0 4px 16px "+C.accentGlow,transform:"translateY(-8px)" }}>＋</div>
                     </button>
@@ -8218,14 +8250,14 @@ export default function PawTraks() {
               </button>
             )}
             <button className="btnP" onClick={function(){ setShowAdd(true); }} style={{ width:"100%",marginBottom:7,fontSize:13 }}>
-              {"+ Add Dog"+(dogs.length>0?" ("+dogs.length+"/100)":"")}
+              {"+ Add Dog"+(dogs.length>0?" ("+dogs.length+"/"+(getTierConfig((user&&user.tier)||"free").maxDogs===Infinity?"∞":getTierConfig((user&&user.tier)||"free").maxDogs)+")":"")}
             </button>
           </div>
         </div>
 
         <div onClick={function(e){ if(focusedSection==="dogs") setFocusedSection(null); }} style={{ flex:1,overflowY:"auto",padding:28 }}>
           {activeDog
-            ? <div className="fadeIn" style={{ maxWidth:700,margin:"0 auto" }}><DogDetail dog={activeDog} onUpdate={updateDog} onDelete={deleteDog} allDogs={dogs} onEdit={function(){ setShowEditDog(true); }} activeTab={activeTab} setActiveTab={setActiveTab} focusedSection={focusedSection} setFocusedSection={setFocusedSection} setSelectedBadge={setSelectedBadge} earnTP={earnTP} setCooldownAlert={setCooldownAlert} /></div>
+            ? <div className="fadeIn" style={{ maxWidth:700,margin:"0 auto" }}><DogDetail dog={activeDog} onUpdate={updateDog} onDelete={deleteDog} allDogs={dogs} onEdit={function(){ setShowEditDog(true); }} activeTab={activeTab} setActiveTab={setActiveTab} focusedSection={focusedSection} setFocusedSection={setFocusedSection} setSelectedBadge={setSelectedBadge} earnTP={earnTP} setCooldownAlert={setCooldownAlert} userTier={(user&&user.tier)||"free"} onUpgrade={function(t){ setShowPricing(true); }} /></div>
             : activeView==="trainer"
               ? <TrainerView user={user} dogs={dogs} onShowRankTiers={function(){ setShowRankTiers(true); }} />
               : <DogBoard dogs={dogs} onSelect={setActiveDog} onUpdate={updateDog} onAdd={function(){ setShowAdd(true); }} earnTP={earnTP} setActiveTab={setActiveTab} setCooldownAlert={setCooldownAlert} />
@@ -8367,6 +8399,27 @@ export default function PawTraks() {
             <input value={user.email} disabled style={{ opacity:.5 }} />
           </FF>
 
+          {/* Current plan badge */}
+          {(function(){
+            var ut = (user && user.tier) || "free";
+            var config = getTierConfig(ut);
+            return (
+              <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+config.color,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
+                <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                  <span style={{ fontSize:20 }}>{config.icon}</span>
+                  <div>
+                    <p style={{ fontSize:13,fontWeight:700,color:config.color }}>{config.name} Plan</p>
+                    <p style={{ fontSize:12,color:C.muted,marginTop:2 }}>{config.maxDogs===Infinity?"Unlimited dogs":"Up to "+config.maxDogs+" dog"+(config.maxDogs>1?"s":"")}</p>
+                  </div>
+                </div>
+                <button onClick={function(){ setShowProfile(false); setShowPricing(true); }}
+                  style={{ background:ut==="elite"?C.accentFaint:C.accent,border:"none",color:ut==="elite"?C.accent:"#fff",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+                  {ut === "elite" ? "Manage" : "Upgrade"}
+                </button>
+              </div>
+            );
+          })()}
+
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
               <span style={{ fontSize:20 }}>🐾</span>
@@ -8506,111 +8559,160 @@ export default function PawTraks() {
         </Modal>
       )}
 
-      {upgradeModal.show && (function(){
-        var userTier = user.tier || 'free';
-        var currentConfig = getTierConfig(userTier);
-        var recommendedConfig = getTierConfig(upgradeModal.recommendedTier);
-        
+      {showPricing && user && (function(){
+        var ut = (user && user.tier) || "free";
+        var tiers = ["free","plus","elite"];
+        var tierColors = { free:"#94a3b8", plus:"#3b82f6", elite:"#f4a24d" };
+
+        function applyBypass() {
+          if (pricingBypassInput.trim().toUpperCase() === DEV_BYPASS_CODE) {
+            var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+            if (all[user.email]) {
+              all[user.email].tier = "elite";
+              all[user.email].bypassTier = true;
+              localStorage.setItem("pt_users", JSON.stringify(all));
+            }
+            setUser(function(u){ return Object.assign({}, u, { tier:"elite", bypassTier:true }); });
+            setShowPricing(false);
+            setPricingBypassInput("");
+            setPricingShowBypass(false);
+            setPricingTapCount(0);
+          } else {
+            alert("Invalid code.");
+          }
+        }
+
         return (
-          <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.92)",zIndex:10003,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
-            <div className="fadeIn" style={{ background:C.card,borderRadius:24,maxWidth:560,width:"100%",boxShadow:"0 25px 100px rgba(0,0,0,0.6)",border:"3px solid "+recommendedConfig.color,overflow:"hidden" }}>
-              
+          <div style={{ position:"fixed",inset:0,background:"#0a0a0f",zIndex:10003,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"flex-start",padding:"24px 16px",overflowY:"auto" }}
+            onClick={function(){ setShowPricing(false); setPricingShowBypass(false); setPricingTapCount(0); setPricingBypassInput(""); }}>
+            <div className="fadeIn" style={{ maxWidth:520,width:"100%",marginBottom:32 }}
+              onClick={function(e){ e.stopPropagation(); }}>
+
               {/* Header */}
-              <div style={{ background:"linear-gradient(135deg, "+recommendedConfig.color+" 0%, "+C.card+" 100%)",padding:"32px 36px",borderBottom:"2px solid "+C.border }}>
-                <div style={{ fontSize:56,marginBottom:12,textAlign:"center" }}>{recommendedConfig.icon}</div>
-                <h2 style={{ fontFamily:"Fraunces",fontSize:26,fontWeight:900,color:C.text,marginBottom:8,textAlign:"center" }}>
-                  Unlock {upgradeModal.feature}
-                </h2>
-                <p style={{ fontSize:15,color:C.muted,fontWeight:600,textAlign:"center",margin:0 }}>
-                  Upgrade to {recommendedConfig.name} to continue
-                </p>
+              <div style={{ textAlign:"center",marginBottom:24 }}>
+                <div style={{ fontSize:48,marginBottom:8 }} onClick={function(){
+                  var next = pricingTapCount + 1;
+                  setPricingTapCount(next);
+                  if (next >= 5) { setPricingShowBypass(true); setPricingTapCount(0); }
+                }}>🐾</div>
+                <h2 style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:"#fff",marginBottom:6 }}>Upgrade PawTraks</h2>
+                <p style={{ color:"rgba(255,255,255,0.6)",fontSize:15 }}>Choose the plan that fits your pack</p>
               </div>
-              
-              {/* Body */}
-              <div style={{ padding:"28px 36px" }}>
-                {/* Current Limit Badge */}
-                {upgradeModal.context.currentLimit && (
-                  <div style={{ background:C.yellowFaint,border:"2px solid "+C.yellow,borderRadius:12,padding:"14px 18px",marginBottom:20,textAlign:"center" }}>
-                    <div style={{ fontSize:13,color:C.text,fontWeight:700,marginBottom:4 }}>Current Limit:</div>
-                    <div style={{ fontSize:18,color:C.yellow,fontWeight:900 }}>{upgradeModal.context.currentLimit}</div>
-                  </div>
-                )}
-                
-                {/* Message */}
-                <p style={{ fontSize:16,color:C.text,lineHeight:1.7,marginBottom:24,textAlign:"center" }}>
-                  {upgradeModal.context.message || "This feature requires a higher tier plan."}
-                </p>
-                
-                {/* Benefits */}
-                <div style={{ background:C.bg,borderRadius:14,padding:20,marginBottom:24,border:"1.5px solid "+C.border }}>
-                  <div style={{ fontSize:14,fontWeight:800,color:recommendedConfig.color,marginBottom:14,textAlign:"center" }}>
-                    ✨ What You'll Get with {recommendedConfig.name}:
-                  </div>
-                  <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-                    {upgradeModal.context.benefits && upgradeModal.context.benefits.map(function(benefit, i){
-                      return (
-                        <div key={i} style={{ display:"flex",gap:10,alignItems:"flex-start" }}>
-                          <span style={{ color:C.green,fontSize:18,flexShrink:0,marginTop:2 }}>✓</span>
-                          <span style={{ fontSize:14,color:C.text,lineHeight:1.6 }}>{benefit}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
+
+              {/* Billing toggle */}
+              <div style={{ display:"flex",justifyContent:"center",marginBottom:24 }}>
+                <div style={{ background:"rgba(255,255,255,0.1)",borderRadius:12,padding:4,display:"flex",gap:4 }}>
+                  {["monthly","annual"].map(function(b){
+                    var active = pricingBilling === b;
+                    return (
+                      <button key={b} onClick={function(){ setPricingBilling(b); }}
+                        style={{ padding:"8px 20px",borderRadius:9,border:"none",background:active?"#fff":"transparent",color:active?"#1a1814":"rgba(255,255,255,0.7)",fontSize:14,fontWeight:700,cursor:"pointer",transition:"all .2s",position:"relative" }}>
+                        {b === "monthly" ? "Monthly" : "Annual"}
+                        {b === "annual" && <span style={{ position:"absolute",top:-8,right:-4,background:"#52d484",color:"#fff",fontSize:10,fontWeight:800,borderRadius:99,padding:"2px 6px" }}>-17%</span>}
+                      </button>
+                    );
+                  })}
                 </div>
-                
-                {/* Pricing Card */}
-                <div style={{ background:"linear-gradient(135deg, "+recommendedConfig.color+"15 0%, "+recommendedConfig.color+"05 100%)",borderRadius:16,padding:20,border:"2px solid "+recommendedConfig.color,marginBottom:24 }}>
-                  <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-                    <div>
-                      <div style={{ fontSize:20,fontWeight:900,color:recommendedConfig.color,marginBottom:4 }}>
-                        {recommendedConfig.name} Plan
+              </div>
+
+              {/* Tier cards */}
+              {tiers.map(function(t){
+                var config = getTierConfig(t);
+                var isCurrent = ut === t;
+                var color = tierColors[t];
+                var price = pricingBilling === "annual" ? config.annualPrice : config.monthlyPrice;
+                var priceStr = price === 0 ? "Free" : "$"+price.toFixed(2)+(pricingBilling==="monthly"?"/mo":"/yr");
+                return (
+                  <div key={t} style={{ background:isCurrent?"rgba(255,255,255,0.14)":"#1a1a2e",border:"2px solid "+(isCurrent?color:"rgba(255,255,255,0.12)"),borderRadius:18,padding:20,marginBottom:12,transition:"all .2s" }}>
+                    <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
+                      <div style={{ display:"flex",alignItems:"center",gap:10 }}>
+                        <span style={{ fontSize:28 }}>{config.icon}</span>
+                        <div>
+                          <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:900,color:color,margin:0 }}>{config.name}</p>
+                          {config.maxDogs === Infinity
+                            ? <p style={{ fontSize:12,color:"rgba(255,255,255,0.5)",margin:0 }}>Unlimited dogs</p>
+                            : <p style={{ fontSize:12,color:"rgba(255,255,255,0.5)",margin:0 }}>Up to {config.maxDogs} dog{config.maxDogs>1?"s":""}</p>}
+                        </div>
                       </div>
-                      <div style={{ fontSize:14,color:C.text,fontWeight:600 }}>
-                        {recommendedConfig.displayPrice} • Save 17% annually
+                      <div style={{ textAlign:"right" }}>
+                        <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:"#fff",margin:0 }}>{priceStr}</p>
+                        {pricingBilling==="annual" && price>0 && <p style={{ fontSize:11,color:"#52d484",margin:0 }}>Save ${(config.monthlyPrice*12 - config.annualPrice).toFixed(2)}/yr</p>}
                       </div>
                     </div>
-                    <div style={{ fontSize:44 }}>{recommendedConfig.icon}</div>
+                    <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:12 }}>
+                      {(config.features||[]).map(function(f,i){
+                        return <span key={i} style={{ background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.75)",fontSize:12,fontWeight:600,padding:"4px 10px",borderRadius:99 }}>✓ {f}</span>;
+                      })}
+                    </div>
+                    {isCurrent
+                      ? <div style={{ textAlign:"center",padding:"10px",background:"rgba(255,255,255,0.08)",borderRadius:10,fontSize:14,color:"rgba(255,255,255,0.5)",fontWeight:700 }}>Current Plan</div>
+                      : (
+                        <button onClick={function(){
+                          // Apply tier locally for testing — Stripe will handle real payments later
+                          var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+                          if (all[user.email]) {
+                            all[user.email].tier = t;
+                            localStorage.setItem("pt_users", JSON.stringify(all));
+                          }
+                          setUser(function(u){ return Object.assign({}, u, { tier: t }); });
+                          setShowPricing(false);
+                        }}
+                          style={{ width:"100%",background:t==="free"?"rgba(255,255,255,0.1)":color,border:t==="free"?"1px solid rgba(255,255,255,0.2)":"none",color:"#fff",borderRadius:10,padding:"12px",fontSize:15,fontWeight:800,cursor:"pointer",transition:"all .2s" }}
+                          onMouseEnter={function(e){ e.currentTarget.style.opacity="0.85"; }}
+                          onMouseLeave={function(e){ e.currentTarget.style.opacity="1"; }}>
+                          {t === "free" ? "Switch to Free" : "Upgrade to "+config.name+" →"}
+                        </button>
+                      )}
+                  </div>
+                );
+              })}
+
+              {/* Secret dev bypass */}
+              {pricingShowBypass && (
+                <div className="fadeIn" style={{ background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:14,padding:16,marginTop:8 }}>
+                  <p style={{ color:"rgba(255,255,255,0.5)",fontSize:12,fontWeight:700,marginBottom:8,textAlign:"center" }}>DEVELOPER ACCESS</p>
+                  <div style={{ display:"flex",gap:8 }}>
+                    <input value={pricingBypassInput} onChange={function(e){ setPricingBypassInput(e.target.value); }}
+                      placeholder="Enter access code"
+                      style={{ flex:1,background:"rgba(255,255,255,0.08)",border:"1px solid rgba(255,255,255,0.2)",borderRadius:8,padding:"10px 14px",color:"#fff",fontSize:14,outline:"none" }} />
+                    <button onClick={applyBypass}
+                      style={{ background:"#f4a24d",border:"none",color:"#fff",borderRadius:8,padding:"10px 16px",fontSize:14,fontWeight:700,cursor:"pointer" }}>
+                      Apply
+                    </button>
                   </div>
                 </div>
-                
-                {/* Comparison Note */}
-                <div style={{ background:C.accentFaint,borderRadius:10,padding:14,marginBottom:20,border:"1px solid "+C.accent }}>
-                  <div style={{ display:"flex",gap:10,alignItems:"flex-start" }}>
-                    <span style={{ fontSize:18,flexShrink:0 }}>💡</span>
-                    <p style={{ fontSize:13,color:C.text,lineHeight:1.6,margin:0 }}>
-                      <strong>Your current plan:</strong> {currentConfig.name} {currentConfig.displayPrice}
-                      <br/>
-                      <strong>Recommended:</strong> {recommendedConfig.name} {recommendedConfig.displayPrice}
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Footer Actions */}
-              <div style={{ padding:"0 36px 32px 36px",display:"flex",gap:12 }}>
-                <button 
-                  onClick={function(){ setUpgradeModal({ show: false, feature: "", recommendedTier: "", context: {} }); }}
-                  style={{ flex:1,background:C.bg,color:C.text,border:"2px solid "+C.border,borderRadius:12,padding:"14px 20px",fontSize:15,fontWeight:700,cursor:"pointer",transition:"all .2s" }}
-                  onMouseEnter={function(e){ e.currentTarget.style.background=C.border; }}
-                  onMouseLeave={function(e){ e.currentTarget.style.background=C.bg; }}>
-                  Maybe Later
-                </button>
-                <button 
-                  onClick={function(){ 
-                    setUpgradeModal({ show: false, feature: "", recommendedTier: "", context: {} });
-                    setShowPricing(true);
-                  }}
-                  style={{ flex:2,background:recommendedConfig.color,color:"#fff",border:"none",borderRadius:12,padding:"14px 20px",fontSize:16,fontWeight:900,cursor:"pointer",transition:"all .2s",boxShadow:"0 4px 12px "+recommendedConfig.color+"40" }}
-                  onMouseEnter={function(e){ e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow="0 6px 20px "+recommendedConfig.color+"60"; }}
-                  onMouseLeave={function(e){ e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="0 4px 12px "+recommendedConfig.color+"40"; }}>
-                  Upgrade Now →
-                </button>
-              </div>
-              
+              )}
+
+              <button onClick={function(){ setShowPricing(false); setPricingShowBypass(false); setPricingTapCount(0); setPricingBypassInput(""); }}
+                style={{ width:"100%",marginTop:16,background:"transparent",border:"1.5px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.6)",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer" }}>
+                Maybe Later
+              </button>
             </div>
           </div>
         );
       })()}
+
+      {upgradeModal.show && (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:10002,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}
+          onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); }}>
+          <div className="fadeIn" style={{ background:C.card,borderRadius:20,maxWidth:420,width:"100%",padding:28,border:"2px solid "+C.accent }}
+            onClick={function(e){ e.stopPropagation(); }}>
+            <div style={{ textAlign:"center",marginBottom:20 }}>
+              <span style={{ fontSize:48 }}>🔒</span>
+              <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:C.text,marginTop:8,marginBottom:6 }}>Upgrade Required</h2>
+              <p style={{ fontSize:15,color:C.muted }}>{upgradeModal.context.message || "This feature requires a paid plan."}</p>
+            </div>
+            <button onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); setShowPricing(true); }}
+              style={{ width:"100%",background:C.accent,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10 }}>
+              See Plans →
+            </button>
+            <button onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); }}
+              style={{ width:"100%",background:"transparent",border:"1.5px solid "+C.border,color:C.muted,borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer" }}>
+              Maybe Later
+            </button>
+          </div>
+        </div>
+      )}
 
       {cooldownAlert.show && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:10001,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
