@@ -8579,8 +8579,10 @@ export default function PawTraks() {
         var tiers = ["free","plus","elite"];
         var tierColors = { free:"#94a3b8", plus:"#3b82f6", elite:"#f4a24d" };
 
+        var DEV_RESET_CODE = DEV_BYPASS_CODE.split("").reverse().join("");
         function applyBypass() {
-          if (pricingBypassInput.trim().toUpperCase() === DEV_BYPASS_CODE) {
+          var code = pricingBypassInput.trim().toUpperCase();
+          if (code === DEV_BYPASS_CODE) {
             var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
             if (all[user.email]) {
               all[user.email].tier = "elite";
@@ -8588,6 +8590,18 @@ export default function PawTraks() {
               localStorage.setItem("pt_users", JSON.stringify(all));
             }
             setUser(function(u){ return Object.assign({}, u, { tier:"elite", bypassTier:true }); });
+            setShowPricing(false);
+            setPricingBypassInput("");
+            setPricingShowBypass(false);
+            setPricingTapCount(0);
+          } else if (code === DEV_RESET_CODE) {
+            var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+            if (all[user.email]) {
+              all[user.email].tier = "free";
+              all[user.email].bypassTier = false;
+              localStorage.setItem("pt_users", JSON.stringify(all));
+            }
+            setUser(function(u){ return Object.assign({}, u, { tier:"free", bypassTier:false }); });
             setShowPricing(false);
             setPricingBypassInput("");
             setPricingShowBypass(false);
