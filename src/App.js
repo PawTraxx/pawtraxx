@@ -977,6 +977,7 @@ function makeAppCss(C) {
     "@keyframes sitEarBounce{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}",
     "@keyframes sitBlink{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(0.1)}}",
     "@keyframes sitBreath{0%,100%{transform:scaleX(1) scaleY(1)}50%{transform:scaleX(1.03) scaleY(0.97)}}",
+    "@keyframes shimmer{0%,100%{opacity:0.6}50%{opacity:1}}",
     ".g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}",
     ".sectionLabel{font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:" + C.muted + ";margin-bottom:10px;}",
     ".tabBarContainer::-webkit-scrollbar{display:none;}",
@@ -7239,6 +7240,7 @@ export default function PawTraks() {
   var [pricingBypassInput, setPricingBypassInput] = useState("");
   var [pricingShowBypass, setPricingShowBypass] = useState(false);
   var [pricingTapCount, setPricingTapCount] = useState(0);
+  var [pricingToast, setPricingToast] = useState(false);
   var [mobileNav, setMobileNav] = useState("board"); // "dogs" | "board" | "trainer" | "profile"
   var [showMobileMenu, setShowMobileMenu] = useState(false);
   var [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
@@ -8094,8 +8096,8 @@ export default function PawTraks() {
                     {user.photo ? <img src={user.photo} alt={user.name} style={{ width:"100%",height:"100%",objectFit:"cover" }} /> : "👤"}
                   </div>
                   <div>
-                    <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.name}</p>
-                    {user.username && <p style={{ fontSize:13,color:C.accent,fontWeight:600,marginBottom:1 }}>@{user.username}</p>}
+                    <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.username ? "@"+user.username : user.name}</p>
+                    {user.username && <p style={{ fontSize:13,color:C.muted,fontWeight:500,marginBottom:1 }}>{user.name}</p>}
                     <p style={{ fontSize:13,color:C.muted }}>{user.email}</p>
                   </div>
                 </div>
@@ -8357,7 +8359,7 @@ export default function PawTraks() {
 
       {showTutorial && (
         <TutorialModal
-          userName={user.name}
+          userName={user.username ? "@"+user.username : user.name}
           onClose={function(){
             setShowTutorial(false);
             // Mark tutorial as done
@@ -8371,7 +8373,7 @@ export default function PawTraks() {
       )}
 
       {showProfile && (
-        <Modal title={user.name + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
+        <Modal title={(user.username ? "@"+user.username : user.name) + "'s Profile"} onClose={function(){ setShowProfile(false); }} titleExtra={
           <button onClick={function(){ setShowProfile(false); setShowSignOutConfirm(true); }}
             style={{ background:C.redFaint,border:"1px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 14px",fontSize:13,fontWeight:700,cursor:"pointer",whiteSpace:"nowrap",textAlign:"center" }}>
             Sign Out
@@ -8646,21 +8648,12 @@ export default function PawTraks() {
                     </div>
                     {isCurrent
                       ? <div style={{ textAlign:"center",padding:"10px",background:"rgba(255,255,255,0.08)",borderRadius:10,fontSize:14,color:"rgba(255,255,255,0.5)",fontWeight:700 }}>Current Plan</div>
-                      : (
-                        <button onClick={function(){
-                          // Apply tier locally for testing — Stripe will handle real payments later
-                          var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
-                          if (all[user.email]) {
-                            all[user.email].tier = t;
-                            localStorage.setItem("pt_users", JSON.stringify(all));
-                          }
-                          setUser(function(u){ return Object.assign({}, u, { tier: t }); });
-                          setShowPricing(false);
-                        }}
-                          style={{ width:"100%",background:t==="free"?"rgba(255,255,255,0.1)":color,border:t==="free"?"1px solid rgba(255,255,255,0.2)":"none",color:"#fff",borderRadius:10,padding:"12px",fontSize:15,fontWeight:800,cursor:"pointer",transition:"all .2s" }}
+                      : t !== "free" && (
+                        <button onClick={function(){ setPricingToast(true); setTimeout(function(){ setPricingToast(false); }, 3000); }}
+                          style={{ width:"100%",background:color,border:"none",color:"#fff",borderRadius:10,padding:"12px",fontSize:15,fontWeight:800,cursor:"pointer",transition:"all .2s" }}
                           onMouseEnter={function(e){ e.currentTarget.style.opacity="0.85"; }}
                           onMouseLeave={function(e){ e.currentTarget.style.opacity="1"; }}>
-                          {t === "free" ? "Switch to Free" : "Upgrade to "+config.name+" →"}
+                          Upgrade to {config.name} →
                         </button>
                       )}
                   </div>
@@ -8683,7 +8676,49 @@ export default function PawTraks() {
                 </div>
               )}
 
-              <button onClick={function(){ setShowPricing(false); setPricingShowBypass(false); setPricingTapCount(0); setPricingBypassInput(""); }}
+              {pricingToast && (
+                <div className="fadeIn" style={{
+                  background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)",
+                  borderRadius:16,
+                  border:"1.5px solid rgba(82,201,125,0.4)",
+                  overflow:"hidden",
+                  position:"relative",
+                  marginBottom:12,
+                }}>
+                  {/* Shimmer top bar */}
+                  <div style={{
+                    position:"absolute",top:0,left:0,right:0,height:2,
+                    background:"linear-gradient(90deg,#52c97d,#3de0a0,#52c97d)",
+                    animation:"shimmer 2.5s ease-in-out infinite",
+                  }} />
+                  <div style={{ padding:"18px 18px",display:"flex",alignItems:"center",gap:14 }}>
+                    {/* Icon block */}
+                    <div style={{
+                      width:46,height:46,flexShrink:0,
+                      background:"rgba(82,201,125,0.15)",
+                      border:"1.5px solid rgba(82,201,125,0.5)",
+                      borderRadius:12,
+                      display:"flex",alignItems:"center",justifyContent:"center",
+                      fontSize:22,
+                    }}>💳</div>
+                    {/* Text */}
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ color:"#52c97d",fontSize:11,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",margin:"0 0 3px" }}>
+                        Coming Soon
+                      </p>
+                      <p style={{ color:"#fff",fontSize:16,fontWeight:800,margin:"0 0 2px" }}>
+                        Payments &amp; Subscriptions
+                      </p>
+                      <p style={{ color:"rgba(255,255,255,0.55)",fontSize:13,fontWeight:500,margin:0 }}>
+                        Plus &amp; Elite plans launching soon — stay tuned!
+                      </p>
+                    </div>
+
+                  </div>
+                </div>
+              )}
+
+              <button onClick={function(){ setShowPricing(false); setPricingShowBypass(false); setPricingTapCount(0); setPricingBypassInput(""); setPricingToast(false); }}
                 style={{ width:"100%",marginTop:16,background:"transparent",border:"1.5px solid rgba(255,255,255,0.2)",color:"rgba(255,255,255,0.6)",borderRadius:12,padding:"12px",fontSize:14,fontWeight:600,cursor:"pointer" }}>
                 Maybe Later
               </button>
