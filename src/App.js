@@ -464,18 +464,18 @@ var TRAINER_RANKS = [
 ];
 
 var TP_VALUES = {
-  fed: 2,
-  food: 0.5,
-  water: 0.5,
-  outside: 1,
-  weight: 5,
-  vet_add: 10,
-  vet_complete: 8,
-  vax_add: 8,
-  med_given: 3,
-  heat_log: 5,
-  add_dog: 15,
-  med_add: 6,
+  fed: 5,
+  food: 2,
+  water: 2,
+  outside: 3,
+  weight: 10,
+  vet_add: 20,
+  vet_complete: 15,
+  vax_add: 15,
+  med_given: 5,
+  heat_log: 10,
+  add_dog: 25,
+  med_add: 10,
 };
 
 // Cooldown periods (in milliseconds) to prevent TP farming
@@ -591,7 +591,6 @@ var TIER_DEFINITIONS = {
       documents: false,
       export: false,
       packBadges: false,
-      familySharing: false,
       notifications: false
     },
     allowedBadgeTiers: [1]
@@ -614,7 +613,6 @@ var TIER_DEFINITIONS = {
       documents: false,
       export: false,
       packBadges: false,
-      familySharing: false,
       notifications: false
     },
     allowedBadgeTiers: [1, 2]
@@ -637,7 +635,6 @@ var TIER_DEFINITIONS = {
       documents: true,
       export: true,
       packBadges: false,
-      familySharing: false,
       notifications: false
     },
     allowedBadgeTiers: [1, 2, 3]
@@ -660,7 +657,6 @@ var TIER_DEFINITIONS = {
       documents: true,
       export: true,
       packBadges: true,
-      familySharing: true,
       notifications: true
     },
     allowedBadgeTiers: [1, 2, 3, 4]
@@ -683,7 +679,6 @@ var TIER_DEFINITIONS = {
       documents: true,
       export: true,
       packBadges: true,
-      familySharing: true,
       notifications: true,
       analytics: true,
       apiAccess: true,
@@ -1659,7 +1654,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
   var [pendingName, setPendingName] = useState("");
   var [inviteInput, setInviteInput] = useState("");
   var [referralInput, setReferralInput] = useState("");
-  var [familyInput, setFamilyInput] = useState("");
+  var [usernameInput, setUsernameInput] = useState("");
 
   // Saved Google accounts (simulate previously signed-in accounts)
   var savedRaw = localStorage.getItem("pt_google_accounts");
@@ -1700,19 +1695,27 @@ function GoogleAuthModal({ onClose, onLogin }) {
     if (!inviteInput || inviteInput.trim() !== INVITE_CODE) {
       setErr("Invalid invite code. Please check and try again."); return;
     }
+    if (!usernameInput || usernameInput.trim().length < 3) {
+      setErr("Username must be at least 3 characters."); return;
+    }
+    if (!/^[a-zA-Z0-9_]+$/.test(usernameInput.trim())) {
+      setErr("Username can only contain letters, numbers, and underscores."); return;
+    }
+    var allUsersForCheck = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    var usernameTakenG = Object.values(allUsersForCheck).some(function(u){ return u.username && u.username.toLowerCase() === usernameInput.trim().toLowerCase(); });
+    if (usernameTakenG) { setErr("That username is already taken. Please choose another."); return; }
     setStep("loading");
     setTimeout(function() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var user = {
         name: pendingName,
+        username: usernameInput.trim().toLowerCase(),
         email: pendingEmail,
         googleAuth: true,
         dogs: [],
         createdAt: new Date().toISOString(),
         referralCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
         referralCount: 0,
-        familyCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4),
-        family: []
       };
 
       // Handle referral code
@@ -1726,29 +1729,6 @@ function GoogleAuthModal({ onClose, onLogin }) {
         }
       }
 
-      // Handle family code
-      if (familyInput.trim()) {
-        var fCode = familyInput.trim().toUpperCase();
-        var owner = Object.values(users).find(function(u){
-          var stored = u.familyCode ? u.familyCode.toUpperCase() : "";
-          var computed = makeFamilyCode(u.email).toUpperCase();
-          return stored === fCode || computed === fCode;
-        });
-        if (owner && owner.email !== pendingEmail) {
-          var currentFamily = owner.family || [];
-          if (currentFamily.length < 4) {
-            user.familyOf = owner.email;
-            currentFamily = currentFamily.concat([{ name: pendingName, email: pendingEmail }]);
-            users[owner.email] = Object.assign({}, owner, { family: currentFamily });
-          } else {
-            setStep("invite");
-            setErr("This family account is full (max 4 members)."); return;
-          }
-        } else {
-          setStep("invite");
-          setErr("Invalid family code. Please check and try again."); return;
-        }
-      }
 
       users[pendingEmail] = user;
       localStorage.setItem("pt_users", JSON.stringify(users));
@@ -1811,6 +1791,19 @@ function GoogleAuthModal({ onClose, onLogin }) {
             <>
               <p style={{ color:"#202124",fontSize:22,fontWeight:400,marginBottom:8 }}>One more step</p>
               <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>PawTraks is invite only. Enter your invite code to continue.</p>
+              <div style={{ position:"relative",marginBottom:10 }}>
+                <span style={{ position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#80868b",fontSize:15,fontWeight:500,pointerEvents:"none" }}>@</span>
+                <input
+                  autoFocus
+                  placeholder="Choose a username"
+                  value={usernameInput}
+                  maxLength={20}
+                  onChange={function(e){ setUsernameInput(e.target.value.replace(/[^a-zA-Z0-9_]/g,"")); setErr(""); }}
+                  onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
+                  style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px 14px 30px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box" }}
+                />
+              </div>
+              <p style={{ color:"#5f6368",fontSize:12,marginBottom:16,marginTop:-6 }}>3–20 characters. Letters, numbers, underscores only.</p>
               <input
                 autoFocus
                 placeholder="Invite code (required)"
@@ -1826,13 +1819,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
                 onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
                 style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:10 }}
               />
-              <input
-                placeholder="Family code (optional — join someone's family)"
-                value={familyInput}
-                onChange={function(e){ setFamilyInput(e.target.value); setErr(""); }}
-                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
-                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:8 }}
-              />
+
               {err && <p style={{ color:"#d93025",fontSize:13,marginBottom:8 }}>{err}</p>}
               <div style={{ display:"flex",justifyContent:"flex-end",gap:8,marginTop:8 }}>
                 <button onClick={onClose} style={{ background:"none",border:"none",color:"#1a73e8",fontSize:14,fontWeight:500,cursor:"pointer",padding:"10px 16px",borderRadius:4 }}>Cancel</button>
@@ -1935,7 +1922,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
 function Auth({ onLogin }) {
   var C = useTheme();
   var [mode, setMode] = useState("login"); // "login" | "register" | "forgot" | "otp" | "reset"
-  var [form, setForm] = useState({ name:"", email:"", password:"", phone:"", inviteCode:"", referralCode:"", familyCode:"" });
+  var [form, setForm] = useState({ name:"", username:"", email:"", password:"", phone:"", inviteCode:"", referralCode:"" });
   var [err, setErr] = useState("");
   var [msg, setMsg] = useState("");
   var [otpInput, setOtpInput] = useState("");
@@ -1955,6 +1942,12 @@ function Auth({ onLogin }) {
     // console.log("users", users)
     if (mode === "register") {
       if (!form.name) { setErr("Enter your name."); return; }
+      if (!form.username || form.username.trim().length < 3) { setErr("Username must be at least 3 characters."); return; }
+      if (!/^[a-zA-Z0-9_]+$/.test(form.username.trim())) { setErr("Username can only contain letters, numbers, and underscores."); return; }
+      // Check username uniqueness
+      var allUsersCheck = JSON.parse(localStorage.getItem("pt_users") || "{}");
+      var usernameTaken = Object.values(allUsersCheck).some(function(u2){ return u2.username && u2.username.toLowerCase() === form.username.trim().toLowerCase(); });
+      if (usernameTaken) { setErr("That username is already taken. Please choose another."); return; }
       if (!form.phone) { setErr("Phone number is required for account recovery."); return; }
       if (!form.inviteCode || form.inviteCode.trim() !== INVITE_CODE) {
         setErr("Invalid invite code. Please contact PawTraks to get access."); return;
@@ -2041,16 +2034,15 @@ function Auth({ onLogin }) {
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var u = { 
-      name:form.name, 
+      name:form.name,
+      username: form.username.trim().toLowerCase(),
       email:form.email, 
       password:form.password, 
       phone:form.phone, 
       dogs:[], 
       createdAt:new Date().toISOString(),
       referralCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
-      referralCount: 0,
-      familyCode: form.name.replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4),
-      family: []
+      referralCount: 0
     };
 
     // Handle referral — give 250 TP to referrer
@@ -2064,29 +2056,6 @@ function Auth({ onLogin }) {
       }
     }
 
-    // Handle family code — link this user to owner
-    if (form.familyCode && form.familyCode.trim()) {
-      var fCode = form.familyCode.trim().toUpperCase();
-      var allUsersForFamily = JSON.parse(localStorage.getItem("pt_users") || "{}");
-      var owner = Object.values(allUsersForFamily).find(function(u2){
-        var stored = u2.familyCode ? u2.familyCode.toUpperCase() : "";
-        var computed = makeFamilyCode(u2.email).toUpperCase();
-        return stored === fCode || computed === fCode;
-      });
-      if (owner && owner.email !== form.email) {
-        var currentFamily = owner.family || [];
-        if (currentFamily.length < 4) {
-          u.familyOf = owner.email;
-          u.dogs = [];
-          currentFamily = currentFamily.concat([{ name: form.name, email: form.email }]);
-          users[owner.email] = Object.assign({}, owner, { family: currentFamily });
-        } else {
-          setErr("This family account is full (max 4 members)."); return;
-        }
-      } else if (form.familyCode.trim()) {
-        setErr("Invalid family code. Please check and try again."); return;
-      }
-    }
     users[form.email] = u;
     localStorage.setItem("pt_users", JSON.stringify(users));
     sendSimulatedEmail(
@@ -2228,6 +2197,21 @@ function Auth({ onLogin }) {
               {mode === "register" && (
                 <FF label="Your Name"><input placeholder="Jane Smith" value={form.name} onChange={function(e){upd("name",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} /></FF>
               )}
+              {mode === "register" && (
+                <FF label="Username" hint="3–20 characters. Letters, numbers, underscores only.">
+                  <div style={{ position:"relative" }}>
+                    <span style={{ position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.muted,fontSize:15,fontWeight:500,pointerEvents:"none",userSelect:"none" }}>@</span>
+                    <input
+                      placeholder="pawtrainer99"
+                      value={form.username}
+                      maxLength={20}
+                      onChange={function(e){ upd("username", e.target.value.replace(/[^a-zA-Z0-9_]/g,"")); }}
+                      onKeyDown={function(e){if(e.key==="Enter")go();}}
+                      style={{ paddingLeft:26 }}
+                    />
+                  </div>
+                </FF>
+              )}
               <FF label="Email"><input type="email" placeholder="you@email.com" value={form.email} onChange={function(e){upd("email",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} /></FF>
               <FF label="Password" hint={mode==="register"?"Must be 8+ characters with uppercase, lowercase, number, and special character":""}>
                 <input type="password" placeholder="••••••••" value={form.password} onChange={function(e){upd("password",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
@@ -2241,7 +2225,6 @@ function Auth({ onLogin }) {
                 <FF label="Invite Code" hint="Required to create an account">
                   <input placeholder="Enter your invite code" value={form.inviteCode} onChange={function(e){upd("inviteCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
                   <input placeholder="Referral code (optional)" value={form.referralCode} onChange={function(e){upd("referralCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
-                  <input placeholder="Family code (optional — join someone's family)" value={form.familyCode} onChange={function(e){upd("familyCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
                 </FF>
               )}
               {msg && <p style={{ color:C.green,fontSize:13,marginBottom:12,lineHeight:1.5 }}>{msg}</p>}
@@ -5153,7 +5136,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
   var totalLogs = dogStats.reduce(function(s,x){ return s+x.totalLogs; }, 0);
 
   // Multiplier info
-  var multiplier = dogs.length <= 1 ? 2 : dogs.length === 2 ? 1.75 : dogs.length === 3 ? 1.5 : dogs.length === 4 ? 1.25 : 1;
+  var multiplier = dogs.length <= 1 ? 3 : dogs.length === 2 ? 2.5 : dogs.length === 3 ? 2 : dogs.length === 4 ? 1.5 : 1.25;
 
   // Points store items
   var STORE_ITEMS = [
@@ -5559,7 +5542,7 @@ function TutorialModal({ onClose, userName }) {
       mascotMood: "trophy",
       title: "The Multiplier ⚡",
       subtitle: "Fewer dogs = bigger bonus",
-      body: "Here's the secret — the fewer dogs you have, the more TP you earn per action! With 1 dog you get a 2x multiplier, meaning every action earns double points. With 2 dogs it's 1.75x, 3 dogs is 1.5x, 4 dogs is 1.25x, and 5 or more is the base rate. This keeps things fair for everyone no matter how big your pack is!",
+      body: "Here's the secret — the fewer dogs you have, the more TP you earn per action! With 1 dog you get a 3x multiplier, meaning every action earns triple points. With 2 dogs it's 2.5x, 3 dogs is 2x, 4 dogs is 1.5x, and 5 or more is 1.25x. This keeps things fair for everyone no matter how big your pack is!",
       tip: "💡 Check your current multiplier anytime on the Trainer Profile screen.",
       color: "#f4a24d"
     },
@@ -6581,13 +6564,6 @@ var MASTER_EMAIL = "pawtraks@master.com";
 var MASTER_PASS  = "PawTraks@Master1!";
 var INVITE_CODE = "PTraks2026";
 
-function makeFamilyCode(email) {
-  var hash = 0;
-  for (var i = 0; i < email.length; i++) { hash = ((hash << 5) - hash) + email.charCodeAt(i); hash |= 0; }
-  var n = Math.abs(hash) % 900000 + 100000;
-  return "PAW" + n;
-}
-
 // admin login page
 function AdminLogin({ onAuth, onBack }) {
   var C = useTheme();
@@ -7239,7 +7215,6 @@ export default function PawTraks() {
   var [showSearch, setShowSearch] = useState(false);
   var [showProfile, setShowProfile] = useState(false);
   var [showTutorial, setShowTutorial] = useState(false);
-  var [showFamily, setShowFamily] = useState(false);
   var [showRankTiers, setShowRankTiers] = useState(false);
   var [showWelcome, setShowWelcome] = useState(false);
   var [showEditDog, setShowEditDog] = useState(false);
@@ -7253,7 +7228,6 @@ export default function PawTraks() {
   var [showMobileMenu, setShowMobileMenu] = useState(false);
   var [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   var isMobile = useIsMobile();
-  var isFamilyMember = !!(user && user.familyOf);
   useEffect(function() {
     var existing = document.querySelector('meta[name="viewport"]');
     if (!existing) {
@@ -7344,23 +7318,6 @@ export default function PawTraks() {
     return function() { document.removeEventListener("keydown", onKey); };
   }, [user, dogs, activeDog, highlightedDogId, focusedSection, showAdd, showEditDog, showProfile, showWelcome, showSearch, search]);
 
-  // One-time migration — assign familyCode to ALL existing accounts that don't have one
-  useEffect(function() {
-    var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    var changed = false;
-    Object.keys(users).forEach(function(email) {
-      if (!users[email].familyCode) {
-        users[email].familyCode = makeFamilyCode(email);
-        changed = true;
-      }
-      if (!users[email].family) {
-        users[email].family = [];
-        changed = true;
-      }
-    });
-    if (changed) localStorage.setItem("pt_users", JSON.stringify(users));
-  }, []);
-
   useEffect(function() {
     var raw = localStorage.getItem("pt_session");
     if (!raw) return;
@@ -7369,15 +7326,8 @@ export default function PawTraks() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var u = users[s.email];
       if (!u) { localStorage.removeItem("pt_session"); return; }
-      // Always ensure familyCode is set
-      if (!u.familyCode) {
-        u.familyCode = makeFamilyCode(s.email);
-        users[s.email] = u;
-        localStorage.setItem("pt_users", JSON.stringify(users));
-      }
-      if (!u.family) { u.family = []; }
       setUser(u);
-      setDogs(u.familyOf ? [] : (u.dogs || []));
+      setDogs(u.dogs || []);
     } catch(e) {
       localStorage.removeItem("pt_session");
     }
@@ -7387,7 +7337,7 @@ export default function PawTraks() {
     if (!user) return;
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     // If family member, save dogs back to the owner's account
-    var saveEmail = user.familyOf || user.email;
+    var saveEmail = user.email;
     all[saveEmail] = Object.assign({}, all[saveEmail], { dogs: list });
     localStorage.setItem("pt_users", JSON.stringify(all));
     setDogs(list);
@@ -7402,11 +7352,11 @@ export default function PawTraks() {
   }
 
   function getTPMultiplier(dogCount) {
-    if (dogCount <= 1) return 2;
-    if (dogCount === 2) return 1.75;
-    if (dogCount === 3) return 1.5;
-    if (dogCount === 4) return 1.25;
-    return 1;
+    if (dogCount <= 1) return 3;    // 1 dog: 3x (was 2x)
+    if (dogCount === 2) return 2.5; // 2 dogs: 2.5x (was 1.75x)
+    if (dogCount === 3) return 2;   // 3 dogs: 2x (was 1.5x)
+    if (dogCount === 4) return 1.5; // 4 dogs: 1.5x (was 1.25x)
+    return 1.25;                    // 5+ dogs: 1.25x (was 1x)
   }
 
   function earnTP(amount, reason) {
@@ -7670,26 +7620,12 @@ export default function PawTraks() {
     var sessions = (allUsers[u.email].sessions || []).concat([sessionEntry]);
     allUsers[u.email] = Object.assign({}, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
 
-    // Ensure familyCode exists — always deterministic from email
-    if (!allUsers[u.email].familyCode) {
-      allUsers[u.email].familyCode = makeFamilyCode(u.email);
-    }
-    if (!allUsers[u.email].family) {
-      allUsers[u.email].family = [];
-    }
 
     // If this is a family member, load the owner's dogs
     var updatedUser = Object.assign({}, u, allUsers[u.email], { sessions: sessions, lastLoginAt: new Date().toISOString() });
-    if (u.familyOf) {
-      var owner = allUsers[u.familyOf];
-      if (owner) {
-        updatedUser.familyDogs = owner.dogs || [];
-        updatedUser.familyOwnerName = owner.name;
-      }
-    }
 
     localStorage.setItem("pt_users", JSON.stringify(allUsers));
-    setUser(updatedUser); setDogs(u.familyOf ? (updatedUser.familyDogs || []) : (updatedUser.dogs || []));
+    setUser(updatedUser); setDogs(updatedUser.dogs || []);
     localStorage.setItem("pt_session", JSON.stringify({ email: u.email, loginAt: sessionEntry.loginAt }));
     setShowWelcome(true);
     if (!u.tutorialDone) {
@@ -8048,12 +7984,6 @@ export default function PawTraks() {
             {/* Board screen */}
             {!activeDog && mobileNav === "board" && (
               <div className="fadeIn" style={{ padding:14 }}>
-                {isFamilyMember && (
-                  <div style={{ background:"#fef3c7",border:"1.5px solid #f59e0b",borderRadius:12,padding:"10px 14px",marginBottom:14,display:"flex",alignItems:"center",gap:10 }}>
-                    <span style={{ fontSize:18 }}>👨‍👩‍👧</span>
-                    <p style={{ fontSize:13,fontWeight:600,color:"#92400e" }}>Viewing {user.familyOwnerName || "family"}'s account — you can log care but cannot edit dogs or health records.</p>
-                  </div>
-                )}
                 <DogBoard dogs={dogs} onSelect={function(d){ setActiveDog(d); setMobileNav("dogs"); }} onUpdate={updateDog} onAdd={function(){ setShowAdd(true); }} earnTP={earnTP} setActiveTab={setActiveTab} setCooldownAlert={setCooldownAlert} />
               </div>
             )}
@@ -8085,7 +8015,7 @@ export default function PawTraks() {
               ].map(function(item) {
                 if (item.special) {
                   return (
-                    <button key="add" onClick={function(){ if(isFamilyMember){alert("Family members cannot add dogs.");return;} setShowAdd(true); }}
+                    <button key="add" onClick={function(){ setShowAdd(true); }}
                       style={{ flex:1,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",background:"none",border:"none",cursor:"pointer",WebkitTapHighlightColor:"transparent" }}>
                       <div style={{ width:44,height:44,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:26,fontWeight:300,lineHeight:1,marginBottom:0,boxShadow:"0 4px 16px "+C.accentGlow,transform:"translateY(-8px)" }}>＋</div>
                     </button>
@@ -8133,6 +8063,7 @@ export default function PawTraks() {
                   </div>
                   <div>
                     <p style={{ fontFamily:"Fraunces",fontSize:18,fontWeight:800,color:C.text,marginBottom:2 }}>{user.name}</p>
+                    {user.username && <p style={{ fontSize:13,color:C.accent,fontWeight:600,marginBottom:1 }}>@{user.username}</p>}
                     <p style={{ fontSize:13,color:C.muted }}>{user.email}</p>
                   </div>
                 </div>
@@ -8392,94 +8323,6 @@ export default function PawTraks() {
       )}
 
 
-      {showFamily && (function(){
-        var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
-        var myFamily = user.family || [];
-        var familyCode = user.familyCode;
-
-        // Fallback: generate and save if somehow missing (old accounts)
-        if (!familyCode) {
-          familyCode = (user.name || "").replace(/\s+/g,"").toUpperCase().slice(0,4) + "FAM" + String(Date.now()).slice(-4);
-          var all2 = JSON.parse(localStorage.getItem("pt_users") || "{}");
-          if (all2[user.email]) { all2[user.email].familyCode = familyCode; localStorage.setItem("pt_users", JSON.stringify(all2)); }
-          setUser(function(u){ return Object.assign({}, u, { familyCode: familyCode }); });
-        }
-
-        function removeMember(email) {
-          var all3 = JSON.parse(localStorage.getItem("pt_users") || "{}");
-          var newFamily = myFamily.filter(function(m){ return m.email !== email; });
-          if (all3[user.email]) { all3[user.email].family = newFamily; }
-          if (all3[email]) { delete all3[email].familyOf; }
-          localStorage.setItem("pt_users", JSON.stringify(all3));
-          setUser(function(u){ return Object.assign({}, u, { family: newFamily, familyCode: familyCode }); });
-        }
-
-        return (
-          <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.7)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:16,overflowY:"auto" }}
-            onClick={function(){ setShowFamily(false); }}>
-            <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.accent,borderRadius:20,padding:24,maxWidth:440,width:"100%",marginTop:20 }}
-              onClick={function(e){ e.stopPropagation(); }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-                <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.text }}>&#128106; Family Account</h2>
-                <button onClick={function(){ setShowFamily(false); }}
-                  style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer" }}>&#x2715;</button>
-              </div>
-
-              <div style={{ background:C.bg,border:"1.5px solid "+C.border,borderRadius:14,padding:16,marginBottom:20 }}>
-                <p style={{ fontSize:14,fontWeight:700,color:C.text,marginBottom:4 }}>Your Family Code</p>
-                <p style={{ fontSize:13,color:C.muted,marginBottom:12 }}>Share this code with family members. They can view all dogs and log daily care.</p>
-                <div style={{ display:"flex",gap:10,alignItems:"center" }}>
-                  <div style={{ flex:1,background:C.card,border:"1.5px solid "+C.accent,borderRadius:10,padding:"12px 16px",fontFamily:"monospace",fontSize:20,fontWeight:800,color:C.accent,letterSpacing:".15em",textAlign:"center" }}>
-                    {familyCode}
-                  </div>
-                  <button onClick={function(){
-                    if (navigator.clipboard) navigator.clipboard.writeText(familyCode).catch(function(){});
-                  }}
-                    style={{ background:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:13,fontWeight:700,cursor:"pointer",flexShrink:0 }}>
-                    Copy
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ background:C.accentFaint,border:"1.5px solid "+C.accent,borderRadius:12,padding:14,marginBottom:20 }}>
-                <p style={{ fontSize:13,fontWeight:700,color:C.accent,marginBottom:8 }}>Family members can:</p>
-                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x2705; View all dogs and info</p>
-                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x2705; Log food, water, outside</p>
-                <p style={{ fontSize:13,color:C.text,marginBottom:4 }}>&#x274C; Cannot add or edit dogs</p>
-                <p style={{ fontSize:13,color:C.text }}>&#x274C; Cannot edit health records or documents</p>
-              </div>
-
-              <p style={{ fontSize:14,fontWeight:800,color:C.text,marginBottom:12 }}>Members ({myFamily.length}/4)</p>
-              {myFamily.length === 0 ? (
-                <div style={{ textAlign:"center",padding:24,background:C.bg,borderRadius:12,border:"1.5px dashed "+C.border }}>
-                  <p style={{ fontSize:14,color:C.muted }}>No family members yet. Share your code to invite them!</p>
-                </div>
-              ) : (
-                <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-                  {myFamily.map(function(member){
-                    return (
-                      <div key={member.email} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 14px" }}>
-                        <div style={{ width:40,height:40,borderRadius:"50%",background:C.accent,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:"#fff",flexShrink:0 }}>
-                          {(member.name||"?")[0].toUpperCase()}
-                        </div>
-                        <div style={{ flex:1,minWidth:0 }}>
-                          <p style={{ fontSize:14,fontWeight:700,color:C.text }}>{member.name}</p>
-                          <p style={{ fontSize:12,color:C.muted }}>{member.email}</p>
-                        </div>
-                        <button onClick={function(){ removeMember(member.email); }}
-                          style={{ background:C.redFaint,border:"1.5px solid "+C.red,color:C.red,borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer",flexShrink:0 }}>
-                          Remove
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-        );
-      })()}
-
       {showTutorial && (
         <TutorialModal
           userName={user.name}
@@ -8523,20 +8366,6 @@ export default function PawTraks() {
           <FF label="Email">
             <input value={user.email} disabled style={{ opacity:.5 }} />
           </FF>
-
-          <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
-            <div style={{ display:"flex",alignItems:"center",gap:10 }}>
-              <span style={{ fontSize:20 }}>👨‍👩‍👧</span>
-              <div>
-                <p style={{ fontSize:13,fontWeight:600,color:C.text }}>Family Account</p>
-                <p style={{ fontSize:13,color:C.muted,marginTop:2,fontWeight:700 }}>Invite up to 4 family members</p>
-              </div>
-            </div>
-            <button onClick={function(){ setShowProfile(false); setShowFamily(true); }}
-              style={{ background:C.accent,border:"none",color:"#fff",borderRadius:8,padding:"8px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-              Manage
-            </button>
-          </div>
 
           <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",background:C.bg,border:"1.5px solid "+C.border,borderRadius:12,padding:"12px 16px",marginBottom:16 }}>
             <div style={{ display:"flex",alignItems:"center",gap:10 }}>
