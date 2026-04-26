@@ -6092,11 +6092,28 @@ function DogBoard({ dogs, onSelect, onUpdate, onAdd, earnTP, setActiveTab, setCo
         <p style={{ color:C.muted,fontSize:18,marginTop:4 }}>You have <strong style={{ color:C.accent }}>{dogs.length}</strong> dog{dogs.length!==1?"s":""} in your pack</p>
       </div>
       {dogs.length === 0 ? (
-        <Card style={{ textAlign:"center",padding:52 }}>
-          <div style={{ fontSize:64,marginBottom:16 }}>🐕</div>
-          <h3 style={{ fontFamily:"Fraunces",fontSize:24,color:C.text,marginBottom:8 }}>Add your first dog!</h3>
-          <p style={{ color:C.text,fontSize:15,fontWeight:500,marginBottom:22,opacity:0.7 }}>Track feeding, outdoor breaks, vet records, medications, and more.</p>
-          <button className="btnP" onClick={onAdd} style={{ fontSize:15,padding:"13px 32px" }}>+ Add a Dog</button>
+        <Card style={{ textAlign:"center",padding:"40px 28px" }}>
+          <div style={{ fontSize:64,marginBottom:12 }}>🐾</div>
+          <h3 style={{ fontFamily:"Fraunces",fontSize:26,color:C.text,marginBottom:8,fontWeight:900 }}>Welcome to PawTraks!</h3>
+          <p style={{ color:C.text,fontSize:15,fontWeight:500,marginBottom:24,opacity:0.7,maxWidth:320,margin:"0 auto 24px" }}>
+            Your dog care hub is ready. Add your first dog to start tracking everything that matters — feeding, walks, vet visits, medications, and more.
+          </p>
+          <button className="btnP" onClick={onAdd} style={{ fontSize:16,padding:"14px 36px",marginBottom:28 }}>🐶 Add My First Dog</button>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,maxWidth:360,margin:"0 auto" }}>
+            {[
+              { icon:"🍗", label:"Log meals & feeding" },
+              { icon:"🌳", label:"Track outdoor breaks" },
+              { icon:"🩺", label:"Vet appointments" },
+              { icon:"💊", label:"Medications & vaccines" },
+            ].map(function(item,i){
+              return (
+                <div key={i} style={{ background:C.bgAlt||C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"12px 10px",display:"flex",alignItems:"center",gap:8 }}>
+                  <span style={{ fontSize:22 }}>{item.icon}</span>
+                  <span style={{ fontSize:13,color:C.muted,fontWeight:600,textAlign:"left" }}>{item.label}</span>
+                </div>
+              );
+            })}
+          </div>
         </Card>
       ) : (
         <div>
@@ -8757,18 +8774,59 @@ export default function PawTraks() {
         );
       })()}
 
-      {upgradeModal.show && (
-        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:10002,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}
+      {upgradeModal.show && (function(){
+        var rec = upgradeModal.recommendedTier || "plus";
+        var tierCfg = { plus:{ color:"#3b82f6", icon:"⭐", features:["Up to 3 dog profiles","Full activity history","Health records & docs","Plus-exclusive badges"] }, elite:{ color:"#f4a24d", icon:"👑", features:["Unlimited dog profiles","Everything in Plus","Elite-exclusive badges","Priority support"] } };
+        var cfg = tierCfg[rec] || tierCfg.plus;
+        var currentCfg = { free:{ icon:"🐾", color:"#94a3b8", features:["1 dog profile","Daily care logging","Basic activity log","Core badges","Trainer Points"] }, plus:tierCfg.plus, elite:tierCfg.elite };
+        var curTier = (user && user.tier) || "free";
+        var curCfg = currentCfg[curTier] || currentCfg.free;
+        return (
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:10002,display:"flex",alignItems:"center",justifyContent:"center",padding:20,overflowY:"auto" }}
           onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); }}>
-          <div className="fadeIn" style={{ background:C.card,borderRadius:20,maxWidth:420,width:"100%",padding:28,border:"2px solid "+C.accent }}
+          <div className="fadeIn" style={{ background:C.card,borderRadius:20,maxWidth:440,width:"100%",padding:28,border:"2px solid "+cfg.color }}
             onClick={function(e){ e.stopPropagation(); }}>
+
+            {/* Header */}
             <div style={{ textAlign:"center",marginBottom:20 }}>
-              <span style={{ fontSize:48 }}>🔒</span>
-              <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:C.text,marginTop:8,marginBottom:6 }}>Upgrade Required</h2>
-              <p style={{ fontSize:15,color:C.muted }}>{upgradeModal.context.message || "This feature requires a paid plan."}</p>
+              <span style={{ fontSize:44 }}>🔒</span>
+              <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:C.text,marginTop:8,marginBottom:4 }}>Feature Locked</h2>
+              <p style={{ fontSize:14,color:C.muted }}>{upgradeModal.context.message || "This feature isn't available on your current plan."}</p>
             </div>
+
+            {/* Your current plan */}
+            <div style={{ background:C.bg,borderRadius:12,padding:"12px 14px",marginBottom:12,border:"1px solid "+C.border }}>
+              <p style={{ fontSize:11,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6 }}>Your current plan</p>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:8 }}>
+                <span style={{ fontSize:20 }}>{curCfg.icon}</span>
+                <span style={{ fontWeight:800,fontSize:15,color:C.text }}>{curTier.charAt(0).toUpperCase()+curTier.slice(1)}</span>
+                {curTier==="free" && <span style={{ fontSize:12,color:C.muted,fontWeight:600 }}>— Free forever</span>}
+              </div>
+              <div style={{ display:"flex",flexWrap:"wrap",gap:4 }}>
+                {curCfg.features.map(function(f,i){ return <span key={i} style={{ fontSize:11,background:C.border,borderRadius:6,padding:"3px 8px",color:C.muted,fontWeight:600 }}>{f}</span>; })}
+              </div>
+            </div>
+
+            {/* Recommended upgrade */}
+            <div style={{ background:"linear-gradient(135deg,"+cfg.color+"18 0%,"+cfg.color+"08 100%)",borderRadius:12,padding:"14px",marginBottom:16,border:"1.5px solid "+cfg.color+"55" }}>
+              <p style={{ fontSize:11,fontWeight:700,color:cfg.color,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:6 }}>Unlock with</p>
+              <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
+                <span style={{ fontSize:22 }}>{cfg.icon}</span>
+                <span style={{ fontWeight:900,fontSize:17,color:cfg.color }}>{rec.charAt(0).toUpperCase()+rec.slice(1)}</span>
+                <span style={{ fontSize:13,color:C.muted,fontWeight:600,marginLeft:"auto" }}>{rec==="plus"?"$3.99/mo":"$7.99/mo"}</span>
+              </div>
+              <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
+                {cfg.features.map(function(f,i){ return (
+                  <div key={i} style={{ display:"flex",alignItems:"center",gap:6 }}>
+                    <span style={{ color:cfg.color,fontWeight:800,fontSize:13 }}>✓</span>
+                    <span style={{ fontSize:13,color:C.text,fontWeight:600 }}>{f}</span>
+                  </div>
+                ); })}
+              </div>
+            </div>
+
             <button onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); setShowPricing(true); }}
-              style={{ width:"100%",background:C.accent,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10 }}>
+              style={{ width:"100%",background:cfg.color,border:"none",color:"#fff",borderRadius:12,padding:"14px",fontSize:16,fontWeight:800,cursor:"pointer",marginBottom:10 }}>
               See Plans →
             </button>
             <button onClick={function(){ setUpgradeModal({ show:false,feature:"",recommendedTier:"",context:{} }); }}
@@ -8777,7 +8835,8 @@ export default function PawTraks() {
             </button>
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {cooldownAlert.show && (
         <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:10001,display:"flex",alignItems:"center",justifyContent:"center",padding:20 }}>
