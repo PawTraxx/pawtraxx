@@ -1667,13 +1667,13 @@ function GoogleAuthModal({ onClose, onLogin }) {
     setTimeout(function() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var user = {
-        name: pendingName,
+        name: usernameInput.trim(),
         username: usernameInput.trim().toLowerCase(),
         email: pendingEmail,
         googleAuth: true,
         dogs: [],
         createdAt: new Date().toISOString(),
-        referralCode: pendingName.replace(/\s+/g,"").toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
+        referralCode: usernameInput.trim().toUpperCase().slice(0,6) + String(Date.now()).slice(-4),
         referralCount: 0,
       };
 
@@ -1683,7 +1683,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
         var referrer = Object.values(users).find(function(u){ return u.referralCode && u.referralCode.toUpperCase() === refCode; });
         if (referrer && referrer.email !== pendingEmail) {
           var refTP = (referrer.trainerPoints || 0) + 250;
-          var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + pendingName + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
+          var refLog = (referrer.tpLog || []).concat([{ amount: 250, reason: "🎉 Referral bonus! " + usernameInput.trim() + " joined using your code.", ts: new Date().toISOString() }]).slice(-200);
           users[referrer.email] = Object.assign({}, referrer, { trainerPoints: refTP, tpLog: refLog, referralCount: (referrer.referralCount || 0) + 1 });
         }
       }
@@ -1751,7 +1751,6 @@ function GoogleAuthModal({ onClose, onLogin }) {
               <p style={{ color:"#202124",fontSize:22,fontWeight:400,marginBottom:8 }}>One more step</p>
               <p style={{ color:"#5f6368",fontSize:14,marginBottom:22 }}>PawTraks is invite only. Enter your invite code to continue.</p>
               <div style={{ position:"relative",marginBottom:10 }}>
-                <span style={{ position:"absolute",left:14,top:"50%",transform:"translateY(-50%)",color:"#80868b",fontSize:15,fontWeight:500,pointerEvents:"none" }}>@</span>
                 <input
                   autoFocus
                   placeholder="Choose a username"
@@ -1759,7 +1758,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
                   maxLength={20}
                   onChange={function(e){ setUsernameInput(e.target.value.replace(/[^a-zA-Z0-9_]/g,"")); setErr(""); }}
                   onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
-                  style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px 14px 30px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box" }}
+                  style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box" }}
                 />
               </div>
               <p style={{ color:"#5f6368",fontSize:12,marginBottom:16,marginTop:-6 }}>3–20 characters. Letters, numbers, underscores only.</p>
@@ -2155,14 +2154,12 @@ function Auth({ onLogin }) {
               {mode === "register" && (
                 <FF label="Username" hint="3–20 characters. Letters, numbers, underscores only.">
                   <div style={{ position:"relative" }}>
-                    <span style={{ position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",color:C.muted,fontSize:15,fontWeight:500,pointerEvents:"none",userSelect:"none" }}>@</span>
                     <input
                       placeholder="pawtrainer99"
                       value={form.username}
                       maxLength={20}
                       onChange={function(e){ upd("username", e.target.value.replace(/[^a-zA-Z0-9_]/g,"")); }}
                       onKeyDown={function(e){if(e.key==="Enter")go();}}
-                      style={{ paddingLeft:26 }}
                     />
                   </div>
                 </FF>
