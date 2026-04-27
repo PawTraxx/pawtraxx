@@ -2054,9 +2054,6 @@ if (!found) {
 function sendForgotOtp() {
     setErr("");
     if (!resetEmail) { setErr("Enter your account email."); return; }
-    var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    var found = users[resetEmail];
-    if (!found) { setErr("No account found with that email."); return; }
     sendPasswordReset(resetEmail).then(function(result) {
       if (result.success) {
         setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
