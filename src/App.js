@@ -7183,7 +7183,6 @@ function AdminDashboard({ onExit }) {
       "Hi "+userName+",\n\nYour PawTraks account and all associated data have been permanently deleted by an administrator.\n\nIf you believe this was done in error, please contact support.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraks Team"
     );
     delete all[email];
-    saveUser({ email: email, deleted: true });
     deleteUserFromDB(email);
     localStorage.setItem("pt_users", JSON.stringify(all));
     // Unsubscribe from push server
