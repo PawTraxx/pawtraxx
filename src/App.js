@@ -1614,6 +1614,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
   var [inviteInput, setInviteInput] = useState("");
   var [referralInput, setReferralInput] = useState("");
   var [usernameInput, setUsernameInput] = useState("");
+  var [phoneInput, setPhoneInput] = useState("");
 
   // Saved Google accounts (simulate previously signed-in accounts)
   var savedRaw = localStorage.getItem("pt_google_accounts");
@@ -1660,9 +1661,13 @@ function GoogleAuthModal({ onClose, onLogin }) {
     if (!/^[a-zA-Z0-9_]+$/.test(usernameInput.trim())) {
       setErr("Username can only contain letters, numbers, and underscores."); return;
     }
+    var phoneClean = phoneInput.trim().replace(/\D/g,"");
+    if (!phoneClean || phoneClean.length < 10) { setErr("Enter a valid phone number."); return; }
     var allUsersForCheck = JSON.parse(localStorage.getItem("pt_users") || "{}");
     var usernameTakenG = Object.values(allUsersForCheck).some(function(u){ return u.username && u.username.toLowerCase() === usernameInput.trim().toLowerCase(); });
     if (usernameTakenG) { setErr("That username is already taken. Please choose another."); return; }
+    var phoneTakenG = Object.values(allUsersForCheck).some(function(u){ return u.phone && u.phone.replace(/\D/g,"") === phoneClean; });
+    if (phoneTakenG) { setErr("That phone number is already linked to another account."); return; }
     setStep("loading");
     setTimeout(function() {
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
@@ -1670,6 +1675,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
         name: usernameInput.trim(),
         username: usernameInput.trim().toLowerCase(),
         email: pendingEmail,
+        phone: phoneInput.trim(),
         googleAuth: true,
         dogs: [],
         createdAt: new Date().toISOString(),
@@ -1762,6 +1768,15 @@ function GoogleAuthModal({ onClose, onLogin }) {
                 />
               </div>
               <p style={{ color:"#5f6368",fontSize:12,marginBottom:16,marginTop:-6 }}>3–20 characters. Letters, numbers, underscores only.</p>
+              <input
+                type="tel"
+                placeholder="Phone number (for account recovery)"
+                value={phoneInput}
+                onChange={function(e){ setPhoneInput(e.target.value); setErr(""); }}
+                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
+                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:4 }}
+              />
+              <p style={{ color:"#5f6368",fontSize:12,marginBottom:16 }}>Used for account recovery — must be unique to your account.</p>
               <input
                 autoFocus
                 placeholder="Invite code (required)"
