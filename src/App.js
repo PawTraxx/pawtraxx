@@ -2255,7 +2255,7 @@ function sendForgotOtp() {
               )}
               {resetMethod === "email" && (
                 <p style={{ fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6,background:C.bg,borderRadius:8,padding:"10px 12px",border:"1px solid "+C.border }}>
-                  A 6-digit verification code will be sent to your registered email address. Enter it on the next screen to reset your password.
+                  A password reset link will be sent to your registered email address. Click the link in the email to set a new password.
                 </p>
               )}
               {err && <p style={{ color:C.red,fontSize:13,marginBottom:12 }}>{err}</p>}
