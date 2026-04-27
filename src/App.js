@@ -5901,39 +5901,62 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
 
       {/* Points Store Modal */}
       {showStore && (
-        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.8)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto" }}
+        <div style={{ position:"fixed",inset:0,background:"rgba(0,0,0,0.88)",zIndex:99999,display:"flex",alignItems:"flex-start",justifyContent:"center",padding:"16px",overflowY:"auto" }}
           onClick={function(){ setShowStore(false); }}>
-          <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.accent,borderRadius:20,padding:20,maxWidth:500,width:"100%" }}
+          <div className="fadeIn" style={{ background:C.card,border:"2px solid "+C.accent,borderRadius:20,padding:24,maxWidth:500,width:"100%" }}
             onClick={function(e){ e.stopPropagation(); }}>
-            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
-              <h2 style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:800,color:C.accent }}>🛍️ Points Store</h2>
+
+            {/* Header */}
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+              <h2 style={{ fontFamily:"Fraunces",fontSize:24,fontWeight:800,color:C.accent }}>🛍️ Points Store</h2>
               <button onClick={function(){ setShowStore(false); }}
-                style={{ background:"none",border:"none",color:C.muted,fontSize:22,cursor:"pointer" }}>✕</button>
+                style={{ background:"none",border:"none",color:C.muted,fontSize:24,cursor:"pointer" }}>✕</button>
             </div>
-            <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:12,padding:12,marginBottom:16,textAlign:"center" }}>
-              <p style={{ fontSize:15,color:C.muted,fontWeight:600 }}>Your Balance</p>
-              <p style={{ fontFamily:"Fraunces",fontSize:28,fontWeight:900,color:C.accent }}>{tp.toLocaleString()} TP</p>
+
+            {/* Balance */}
+            <div style={{ background:C.accentFaint,border:"1px solid "+C.accent,borderRadius:14,padding:"18px",marginBottom:20,textAlign:"center" }}>
+              <p style={{ fontSize:14,color:C.muted,fontWeight:700,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:4 }}>Your Balance</p>
+              <p style={{ fontFamily:"Fraunces",fontSize:36,fontWeight:900,color:C.accent,marginBottom:2 }}>{tp.toLocaleString()} TP</p>
+              <p style={{ fontSize:14,color:C.muted }}>Keep earning — every action counts</p>
             </div>
-            <p style={{ fontSize:15,color:C.muted,marginBottom:16,textAlign:"center" }}>🚧 Store coming soon! Earn points now and spend them when we launch.</p>
-            <div style={{ display:"flex",flexDirection:"column",gap:10 }}>
-              {STORE_ITEMS.map(function(item){
-                var affordable = tp >= item.points;
+
+            {/* Coming soon banner */}
+            <div style={{ background:"linear-gradient(135deg,#1a1a2e 0%,#16213e 60%,#0f3460 100%)",border:"1.5px solid rgba(82,201,125,0.4)",borderRadius:14,padding:"20px",marginBottom:20,textAlign:"center",position:"relative",overflow:"hidden" }}>
+              <div style={{ position:"absolute",top:0,left:0,right:0,height:2,background:"linear-gradient(90deg,#52c97d,#3de0a0,#52c97d)",animation:"shimmer 2.5s ease-in-out infinite" }} />
+              <div style={{ fontSize:38,marginBottom:8 }}>🚀</div>
+              <p style={{ fontSize:12,fontWeight:700,color:"#52c97d",textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:6 }}>Coming Soon</p>
+              <p style={{ fontFamily:"Fraunces",fontSize:20,fontWeight:800,color:"#fff",marginBottom:8 }}>The Store is Almost Here</p>
+              <p style={{ fontSize:15,color:"rgba(255,255,255,0.65)",lineHeight:1.6 }}>
+                We're putting the finishing touches on redemptions. Your points are safe — stack them now so you're ready to spend on launch day.
+              </p>
+            </div>
+
+            {/* Preview items */}
+            <p style={{ fontSize:13,fontWeight:700,color:C.muted,textTransform:"uppercase",letterSpacing:"0.08em",marginBottom:12 }}>Coming to the store</p>
+            <div style={{ display:"flex",flexDirection:"column",gap:10,marginBottom:20 }}>
+              {STORE_ITEMS.slice(0,5).map(function(item){
+                var canAffordItem = tp >= item.points;
                 return (
-                  <div key={item.id} style={{ display:"flex",alignItems:"center",gap:12,background:C.bg,border:"1.5px solid "+(affordable?C.accent:C.border),borderRadius:12,padding:12,opacity:affordable?1:0.6 }}>
-                    <div style={{ fontSize:32,flexShrink:0 }}>{item.icon}</div>
-                    <div style={{ flex:1 }}>
-                      <p style={{ fontWeight:700,fontSize:14,color:C.text }}>{item.name}</p>
-                      <p style={{ fontSize:15,color:C.muted }}>{item.desc} · {item.category}</p>
+                  <div key={item.id} style={{ display:"flex",alignItems:"center",gap:14,background:C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"13px 14px",opacity:0.8 }}>
+                    <div style={{ fontSize:30,flexShrink:0 }}>{item.icon}</div>
+                    <div style={{ flex:1,minWidth:0 }}>
+                      <p style={{ fontWeight:700,fontSize:14,color:C.text,marginBottom:2 }}>{item.name}</p>
+                      <p style={{ fontSize:15,color:C.muted }}>{item.desc}</p>
                     </div>
                     <div style={{ textAlign:"right",flexShrink:0 }}>
-                      <p style={{ fontWeight:800,fontSize:14,color:affordable?C.accent:C.muted }}>{item.points.toLocaleString()} TP</p>
-                      {affordable && <p style={{ fontSize:13,color:C.accent,fontWeight:700 }}>✓ Affordable</p>}
+                      <p style={{ fontWeight:800,fontSize:15,color:canAffordItem?C.accent:C.muted }}>{item.points.toLocaleString()} TP</p>
+                      {canAffordItem && <p style={{ fontSize:12,color:C.accent,fontWeight:700 }}>✓ You can afford this</p>}
                     </div>
                   </div>
                 );
               })}
+              <p style={{ textAlign:"center",color:C.muted,fontSize:14,fontWeight:600,padding:"6px 0" }}>+ more rewards coming...</p>
             </div>
-            <p style={{ fontSize:15,color:C.muted,textAlign:"center",marginTop:16,lineHeight:1.5 }}>Items will be available to redeem when the store officially launches. Keep earning!</p>
+
+            <button onClick={function(){ setShowStore(false); }}
+              style={{ width:"100%",background:C.accent,border:"none",color:"#fff",borderRadius:12,padding:"15px",fontSize:16,fontWeight:800,cursor:"pointer" }}>
+              Got It — Keep Earning 🐾
+            </button>
           </div>
         </div>
       )}
