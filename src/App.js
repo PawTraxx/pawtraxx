@@ -1698,6 +1698,8 @@ function GoogleAuthModal({ onClose, onLogin }) {
 
       users[pendingEmail] = user;
       localStorage.setItem("pt_users", JSON.stringify(users));
+      saveUser(user);
+      registerWithFirebase(pendingEmail, Math.random().toString(36));
       sendSimulatedEmail(
         pendingEmail,
         "Welcome to PawTraks! 🐾",
