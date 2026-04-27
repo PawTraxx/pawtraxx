@@ -7913,18 +7913,6 @@ export default function PawTraks() {
       localStorage.removeItem("pt_session");
     }
 }, []);
-      // Fix name: if it looks like an email or is missing, use username
-      if (u.username && (!u.name || u.name.includes("@"))) {
-        u = Object.assign({}, u, { name: u.username });
-        users[s.email] = u;
-        localStorage.setItem("pt_users", JSON.stringify(users));
-      }
-      setUser(u);
-      setDogs(u.dogs || []);
-    } catch(e) {
-      localStorage.removeItem("pt_session");
-    }
-  }, []);
 
   var persist = useCallback(function(list) {
     if (!user) return;
