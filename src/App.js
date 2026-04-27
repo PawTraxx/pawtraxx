@@ -7179,10 +7179,11 @@ function AdminDashboard({ onExit }) {
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[email] = Object.assign({}, all[email], { banned: !all[email].banned });
     localStorage.setItem("pt_users", JSON.stringify(all));
+    saveUser(all[email]);
     setConfirmBan(null);
     setRefresh(function(r){ return r+1; });
     if (selectedUser && selectedUser.email === email) setSelectedUser(all[email]);
-  }
+}
 
   function resetPassword(email, password) {
     if (!password || password.length < 6) { setResetMsg("Password must be at least 6 characters."); return; }
@@ -7190,6 +7191,7 @@ function AdminDashboard({ onExit }) {
     var userName = all[email] ? all[email].name : "User";
     all[email] = Object.assign({}, all[email], { password: password });
     localStorage.setItem("pt_users", JSON.stringify(all));
+    saveUser(all[email]);
     sendSimulatedEmail(
       email,
       "Your PawTraks password has been reset 🔑",
