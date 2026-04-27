@@ -7156,6 +7156,14 @@ function AdminDashboard({ onExit }) {
   var [newPass, setNewPass] = useState("");
   var [resetMsg, setResetMsg] = useState("");
   var [refresh, setRefresh] = useState(0);
+  useEffect(function() {
+  getAllUsersFromDB().then(function(firebaseUsers) {
+    var local = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    var merged = Object.assign({}, local, firebaseUsers);
+    localStorage.setItem("pt_users", JSON.stringify(merged));
+    setRefresh(function(r){ return r+1; });
+  });
+}, []);
 
   var allUsers = JSON.parse(localStorage.getItem("pt_users") || "{}");
   var userList = Object.values(allUsers).filter(function(u){ return u.email !== ADMIN_EMAIL && u.email !== MASTER_EMAIL; });
