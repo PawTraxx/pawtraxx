@@ -2236,7 +2236,7 @@ function sendForgotOtp() {
               <p style={{ fontFamily:"Fraunces",fontSize:18,color:C.text,fontWeight:700,marginBottom:6 }}>Reset Password</p>
               <p style={{ color:C.muted,fontSize:13,marginBottom:14 }}>Verify your identity to reset your password.</p>
               <div style={{ display:"flex",gap:6,marginBottom:16,background:C.bg,borderRadius:10,padding:4 }}>
-                {[{val:"phone",label:"📱 Via Phone"},{val:"email",label:"📧 Via Email"}].map(function(opt) {
+                [{val:"email",label:"📧 Via Email"}].map(function(opt) {
                   return (
                     <button key={opt.val} onClick={function(){ setResetMethod(opt.val); setErr(""); }}
                       style={{ flex:1,padding:"8px",borderRadius:7,border:"none",background:resetMethod===opt.val?C.card:"transparent",color:resetMethod===opt.val?C.text:C.muted,fontWeight:resetMethod===opt.val?600:400,fontSize:13,cursor:"pointer",transition:"all .2s" }}>
