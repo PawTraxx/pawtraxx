@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, deleteUser as deleteAuthUser } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyALHLhCMc840JMOl1joViz8HUaQqors_I",
@@ -12,6 +13,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+export const auth = getAuth(app);
 
 export async function saveUser(userData) {
   try {
@@ -40,4 +42,19 @@ export async function deleteUserFromDB(email) {
   try {
     await deleteDoc(doc(db, 'users', email));
   } catch(e) { console.error('deleteUser error:', e); }
+}
+
+export async function registerWithFirebase(email, password) {
+  try {
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(cred.user);
+    return { success: true, user: cred.user };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+export async function sendPasswordReset(email) {
+  try {
+    await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
 }
