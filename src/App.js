@@ -578,11 +578,11 @@ var DEV_BYPASS_CODE = "PAWDEV2026";
 // ─── TIER DEFINITIONS ────────────────────────────────────────────────────────
 var TIER_DEFINITIONS = {
   free: {
-    name: "Free",
+    name: "Essential",
     monthlyPrice: 0,
-    annualPrice: 0,
-    displayMonthly: "Free",
-    displayAnnual: "Free",
+    annualPrice: 39.99,
+    displayMonthly: "Essential",
+    displayAnnual: "Essential",
     icon: "🐾",
     color: "#94a3b8",
     maxDogs: 1,
@@ -597,17 +597,17 @@ var TIER_DEFINITIONS = {
   },
   plus: {
     name: "Plus",
-    monthlyPrice: 3.99,
-    annualPrice: 39.99,
-    displayMonthly: "$3.99/mo",
-    displayAnnual: "$39.99/yr",
+    monthlyPrice: 5.99,
+    annualPrice: 59.99,
+    displayMonthly: "$5.99/mo",
+    displayAnnual: "$59.99/yr",
     icon: "⭐",
     color: "#3b82f6",
     maxDogs: 3,
     allowedBadgeTiers: ["free", "plus"],
     features: [
       "Up to 3 dog profiles",
-      "Everything in Free",
+      "Everything in Essential",
       "Plus-exclusive badges",
       "Full activity history",
       "Health records & docs"
@@ -615,10 +615,10 @@ var TIER_DEFINITIONS = {
   },
   elite: {
     name: "Elite",
-    monthlyPrice: 7.99,
-    annualPrice: 79.99,
-    displayMonthly: "$7.99/mo",
-    displayAnnual: "$79.99/yr",
+    monthlyPrice: 9.99,
+    annualPrice: 99.99,
+    displayMonthly: "$9.99/mo",
+    displayAnnual: "$99.99/yr",
     icon: "👑",
     color: "#f4a24d",
     maxDogs: Infinity,
@@ -9153,8 +9153,9 @@ export default function PawTraks() {
                 var config = getTierConfig(t);
                 var isCurrent = ut === t;
                 var color = tierColors[t];
+                var isEssential = t === "free";
                 var price = pricingBilling === "annual" ? config.annualPrice : config.monthlyPrice;
-                var priceStr = price === 0 ? "Free" : "$"+price.toFixed(2)+(pricingBilling==="monthly"?"/mo":"/yr");
+                var priceStr = isEssential ? "Free Now" : "$"+price.toFixed(2)+(pricingBilling==="monthly"?"/mo":"/yr");
                 return (
                   <div key={t} style={{ background:isCurrent?"rgba(255,255,255,0.14)":"#1a1a2e",border:"2px solid "+(isCurrent?color:"rgba(255,255,255,0.12)"),borderRadius:18,padding:20,marginBottom:12,transition:"all .2s" }}>
                     <div style={{ display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12 }}>
@@ -9169,7 +9170,8 @@ export default function PawTraks() {
                       </div>
                       <div style={{ textAlign:"right" }}>
                         <p style={{ fontFamily:"Fraunces",fontSize:22,fontWeight:900,color:"#fff",margin:0 }}>{priceStr}</p>
-                        {pricingBilling==="annual" && price>0 && <p style={{ fontSize:11,color:"#52d484",margin:0 }}>Save ${(config.monthlyPrice*12 - config.annualPrice).toFixed(2)}/yr</p>}
+                        {isEssential && <p style={{ fontSize:11,color:"rgba(255,255,255,0.45)",margin:0 }}>{pricingBilling==="annual" ? "$39.99/yr at launch" : "$3.99/mo at launch"}</p>}
+                        {pricingBilling==="annual" && !isEssential && <p style={{ fontSize:11,color:"#52d484",margin:0 }}>Save ${(config.monthlyPrice*12 - config.annualPrice).toFixed(2)}/yr</p>}
                       </div>
                     </div>
                     <div style={{ display:"flex",flexWrap:"wrap",gap:6,marginBottom:12 }}>
@@ -9297,7 +9299,7 @@ export default function PawTraks() {
               <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:10 }}>
                 <span style={{ fontSize:22 }}>{cfg.icon}</span>
                 <span style={{ fontWeight:900,fontSize:17,color:cfg.color }}>{rec.charAt(0).toUpperCase()+rec.slice(1)}</span>
-                <span style={{ fontSize:13,color:C.muted,fontWeight:600,marginLeft:"auto" }}>{rec==="plus"?"$3.99/mo":"$7.99/mo"}</span>
+                <span style={{ fontSize:13,color:C.muted,fontWeight:600,marginLeft:"auto" }}>{rec==="plus"?"$5.99/mo":"$9.99/mo"}</span>
               </div>
               <div style={{ display:"flex",flexDirection:"column",gap:5 }}>
                 {cfg.features.map(function(f,i){ return (
