@@ -1770,13 +1770,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
                 onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
                 style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:10 }}
               />
-              <input
-                placeholder="Referral code (optional)"
-                value={referralInput}
-                onChange={function(e){ setReferralInput(e.target.value); setErr(""); }}
-                onKeyDown={function(e){ if(e.key==="Enter") completeGoogleSignup(); }}
-                style={{ width:"100%",border:"1px solid #dadce0",borderRadius:4,padding:"14px 16px",fontSize:15,color:"#202124",fontFamily:"inherit",outline:"none",background:"#fff",boxSizing:"border-box",marginBottom:10 }}
-              />
+              
 
               {err && <p style={{ color:"#d93025",fontSize:13,marginBottom:8 }}>{err}</p>}
               <div style={{ display:"flex",justifyContent:"flex-end",gap:8,marginTop:8 }}>
@@ -2176,11 +2170,7 @@ function Auth({ onLogin }) {
               {mode === "register" && (
                 <FF label="Invite Code" hint="Required to create an account">
                   <input placeholder="Enter your invite code" value={form.inviteCode} onChange={function(e){upd("inviteCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
-                  <input placeholder="Referral code (optional)" value={form.referralCode} onChange={function(e){upd("referralCode",e.target.value);}} onKeyDown={function(e){if(e.key==="Enter")go();}} />
-                  <div style={{ display:"flex",alignItems:"flex-start",gap:6,marginTop:6,padding:"8px 10px",background:"rgba(82,201,125,0.08)",border:"1px solid rgba(82,201,125,0.25)",borderRadius:8 }}>
-                    <span style={{ fontSize:13,marginTop:1 }}>🚧</span>
-                    <p style={{ fontSize:12,color:"#52c97d",fontWeight:600,margin:0,lineHeight:1.5 }}>Referral rewards are coming soon — enter a code now and you'll get credit automatically when they launch!</p>
-                  </div>
+
                 </FF>
               )}
               {msg && <p style={{ color:C.green,fontSize:13,marginBottom:12,lineHeight:1.5 }}>{msg}</p>}
@@ -4404,7 +4394,7 @@ function BadgesTab({ dog, allDogs, setSelectedBadge, userTier, onUpgrade }) {
       {/* ── Header progress card ── */}
       <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:18,padding:18,marginBottom:20 }}>
         <p style={{ fontSize:13,fontWeight:800,color:C.text,textTransform:"uppercase",letterSpacing:".07em",marginBottom:12 }}>Tier Breakdown</p>
-        <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8 }}>
+        <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8 }}>
           {tierCounts.map(function(t){
             var active = t.earned > 0;
             return (
@@ -5709,12 +5699,11 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
       </div>
 
       {/* Quick Stats */}
-      <div style={{ display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:16 }}>
+      <div style={{ display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:10,marginBottom:16 }}>
         {[
           { icon:"🐕", label:"Dogs", val:dogs.length },
           { icon:"🏅", label:"Badges", val:totalBadges },
           { icon:"🔥", label:"Streak", val:streak+"d" },
-          { icon:"👥", label:"Referrals", val:referralCount },
         ].map(function(s){
           return (
             <div key={s.label} style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:14,padding:"12px 8px",textAlign:"center" }}>
@@ -5726,30 +5715,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
         })}
       </div>
 
-      {/* Referral Code Card */}
-      {referralCode && (
-        <div style={{ background:C.card,border:"1.5px solid "+C.border,borderRadius:16,padding:16,marginBottom:16 }}>
-          <p style={{ fontSize:15,fontWeight:800,color:C.text,marginBottom:4 }}>🎁 Your Referral Code</p>
-          <p style={{ fontSize:15,color:C.muted,marginBottom:10 }}>When referral rewards launch, you'll earn 250 TP for every friend who signs up with your code!</p>
-          <div style={{ display:"flex",gap:10,alignItems:"center",marginBottom:12 }}>
-            <div style={{ flex:1,background:C.bg,border:"1.5px solid "+C.accent,borderRadius:10,padding:"12px 16px",fontFamily:"monospace",fontSize:18,fontWeight:800,color:C.accent,letterSpacing:".15em",textAlign:"center" }}>
-              {referralCode}
-            </div>
-            <button onClick={copyReferralCode}
-              style={{ background:copied?C.green:C.accent,border:"none",color:"#fff",borderRadius:10,padding:"12px 16px",fontSize:14,fontWeight:700,cursor:"pointer",flexShrink:0,transition:"background .2s" }}>
-              {copied ? "✓ Copied!" : "Copy"}
-            </button>
-          </div>
-          <div style={{ background:"linear-gradient(135deg,#1a1a2e,#16213e)",border:"1px solid rgba(82,201,125,0.35)",borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"flex-start",gap:10 }}>
-            <span style={{ fontSize:16,marginTop:1 }}>🚧</span>
-            <div>
-              <p style={{ fontSize:14,fontWeight:700,color:"#52c97d",margin:"0 0 2px" }}>Referral rewards coming soon</p>
-              <p style={{ fontSize:13,color:"rgba(255,255,255,0.55)",margin:0,lineHeight:1.5 }}>TP bonuses activate when payments go live. Share your code now so you get credit from day one!</p>
-            </div>
-          </div>
-          {referralCount > 0 && <p style={{ fontSize:13,color:C.accent,fontWeight:700,marginTop:10 }}>🎉 {referralCount} friend{referralCount !== 1 ? "s" : ""} already used your code!</p>}
-        </div>
-      )}
+
 
       {/* Tab Bar */}
       <div style={{ display:"flex",gap:8,marginBottom:16 }}>
@@ -5917,8 +5883,7 @@ function TrainerView({ user, dogs, onShowRankTiers }) {
                 ["🏆","Vaccines Up to Date","All vaccines current = +200 TP"],
                 ["🏆","First Vet Appointment","Schedule your first vet visit = +50 TP"],
                 ["🏆","10 Vet Visits Completed","Complete 10 vet appointments = +500 TP"],
-                ["🎁","Referral Bonus","Friend signs up with your code = +250 TP"],
-              ].map(function(row, i){
+                              ].map(function(row, i){
                 return (
                   <div key={i} style={{ background:C.bg,border:"1px solid "+C.border,borderRadius:12,padding:"10px 12px",display:"flex",alignItems:"center",gap:10 }}>
                     <span style={{ fontSize:22,flexShrink:0 }}>{row[0]}</span>
@@ -6036,7 +6001,7 @@ function TutorialModal({ onClose, userName }) {
       title: "Trainer Points 🏆",
       subtitle: "Earn points, get rewards",
       body: "Every time you log care for your dogs you earn Trainer Points. Log food, water, outside trips, vet visits, vaccines and more — it all adds up! Save your points and spend them in the store on collars, leashes, PawTraks merch and more.",
-      tip: "💡 Earn bonus TP with 7-day streaks, milestones, and referrals!",
+      tip: "💡 Earn bonus TP with 7-day streaks and milestones!",
       color: "#f4a24d"
     },
     {
