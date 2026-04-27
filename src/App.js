@@ -2062,7 +2062,7 @@ function sendForgotOtp() {
         setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
         setMode("login");
       } else {
-        setErr("Could not send reset email. Please try again.");
+        setErr("Error: " + result.error);
       }
     });
 }
