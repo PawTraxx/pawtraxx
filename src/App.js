@@ -7897,7 +7897,22 @@ if (firebaseUser) {
       localStorage.removeItem("pt_session");
     }
 }, []);
-
+useEffect(function() {
+  if (!user) return;
+  var interval = setInterval(function() {
+    getUser(user.email).then(function(firebaseUser) {
+      if (!firebaseUser) {
+        localStorage.removeItem("pt_session");
+        var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+        delete all[user.email];
+        localStorage.setItem("pt_users", JSON.stringify(all));
+        setUser(null);
+        setDogs([]);
+      }
+    });
+  }, 30000);
+  return function() { clearInterval(interval); };
+}, [user]);
   var persist = useCallback(function(list) {
     if (!user) return;
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
