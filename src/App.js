@@ -2033,6 +2033,7 @@ if (!found) {
 
     users[form.email] = u;
     localStorage.setItem("pt_users", JSON.stringify(users));
+    saveUser(u);
     sendSimulatedEmail(
       form.email,
       "Welcome to PawTraks! 🐾",
@@ -2098,6 +2099,7 @@ if (!found) {
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
     users[resetEmail] = Object.assign({}, users[resetEmail], { password: newPassword });
     localStorage.setItem("pt_users", JSON.stringify(users));
+    saveUser(user);
     setMsg("Password updated! You can now sign in.");
     setMode("login");
     setForm(Object.assign({}, form, { email: resetEmail, password: "" }));
