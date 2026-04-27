@@ -3,7 +3,7 @@ import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } fro
 import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyALHLhCMc840JMOl1joViz8HUaQqors_I",
+  apiKey: "AIzaSyALHLhCMc840OJMOl1joViz8HUaQqors_I",
   authDomain: "pawtraks-331a5.firebaseapp.com",
   projectId: "pawtraks-331a5",
   storageBucket: "pawtraks-331a5.firebasestorage.app",
