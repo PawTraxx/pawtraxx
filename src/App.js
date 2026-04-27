@@ -7884,7 +7884,35 @@ export default function PawTraks() {
       var s = JSON.parse(raw);
       var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
       var u = users[s.email];
-      if (!u) { localStorage.removeItem("pt_session"); return; }
+      if (u) {
+        // Found locally, but sync with Firebase in background
+        getUser(s.email).then(function(firebaseUser) {
+          if (firebaseUser) {
+            var merged = Object.assign({}, u, firebaseUser);
+            var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+            all[s.email] = merged;
+            localStorage.setItem("pt_users", JSON.stringify(all));
+            setUser(merged);
+            setDogs(merged.dogs || []);
+          }
+        });
+        setUser(u);
+        setDogs(u.dogs || []);
+      } else {
+        // Not found locally, try Firebase
+        getUser(s.email).then(function(firebaseUser) {
+          if (!firebaseUser) { localStorage.removeItem("pt_session"); return; }
+          var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+          all[firebaseUser.email] = firebaseUser;
+          localStorage.setItem("pt_users", JSON.stringify(all));
+          setUser(firebaseUser);
+          setDogs(firebaseUser.dogs || []);
+        });
+      }
+    } catch(e) {
+      localStorage.removeItem("pt_session");
+    }
+}, []);
       // Fix name: if it looks like an email or is missing, use username
       if (u.username && (!u.name || u.name.includes("@"))) {
         u = Object.assign({}, u, { name: u.username });
