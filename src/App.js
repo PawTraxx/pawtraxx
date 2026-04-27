@@ -2245,10 +2245,6 @@ function sendForgotOtp() {
                   );
                 })}
               </div>
-              {resetMethod === "phone" && (
-                <FF label="Phone Number" hint="Must match your registered number">
-                  <input type="tel" placeholder="+1 (555) 000-0000" value={resetPhone} onChange={function(e){ setResetPhone(e.target.value); }} onKeyDown={function(e){if(e.key==="Enter")sendForgotOtp();}} />
-                </FF>
               )}
               {resetMethod === "email" && (
                 <FF label="Your Account Email"><input type="email" placeholder="you@email.com" value={resetEmail} onChange={function(e){ setResetEmail(e.target.value); }} onKeyDown={function(e){if(e.key==="Enter")sendForgotOtp();}} /></FF>
