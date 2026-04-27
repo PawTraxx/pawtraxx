@@ -8196,6 +8196,7 @@ export default function PawTraks() {
 
     localStorage.setItem("pt_users", JSON.stringify(allUsers));
     saveUser(updatedUser);
+    registerWithFirebase(updatedUser.email, updatedUser.password);
     setUser(updatedUser); setDogs(updatedUser.dogs || []);
     localStorage.setItem("pt_session", JSON.stringify({ email: u.email, loginAt: sessionEntry.loginAt }));
     setShowWelcome(true);
