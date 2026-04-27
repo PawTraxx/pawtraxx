@@ -2035,6 +2035,7 @@ if (!found) {
     users[form.email] = u;
     localStorage.setItem("pt_users", JSON.stringify(users));
     saveUser(u);
+    registerWithFirebase(form.email, form.password);
     sendSimulatedEmail(
       form.email,
       "Welcome to PawTraks! 🐾",
