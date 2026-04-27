@@ -7183,6 +7183,7 @@ function AdminDashboard({ onExit }) {
       "Hi "+userName+",\n\nYour PawTraks account and all associated data have been permanently deleted by an administrator.\n\nIf you believe this was done in error, please contact support.\n\nDate: "+new Date().toLocaleString()+"\n\n— The PawTraks Team"
     );
     delete all[email];
+    saveUser({ email: email, deleted: true });
     deleteUserFromDB(email);
     localStorage.setItem("pt_users", JSON.stringify(all));
     // Unsubscribe from push server
@@ -7861,14 +7862,23 @@ export default function PawTraks() {
       if (u) {
         // Found locally, but sync with Firebase in background
         getUser(s.email).then(function(firebaseUser) {
-          if (firebaseUser) {
-            var merged = Object.assign({}, u, firebaseUser);
-            var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
-            all[s.email] = merged;
-            localStorage.setItem("pt_users", JSON.stringify(all));
-            setUser(merged);
-            setDogs(merged.dogs || []);
-          }
+          if (!firebaseUser) {
+  localStorage.removeItem("pt_session");
+  setUser(null);
+  setDogs([]);
+  var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+  delete all[s.email];
+  localStorage.setItem("pt_users", JSON.stringify(all));
+  return;
+}
+if (firebaseUser) {
+  var merged = Object.assign({}, u, firebaseUser);
+  var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+  all[s.email] = merged;
+  localStorage.setItem("pt_users", JSON.stringify(all));
+  setUser(merged);
+  setDogs(merged.dogs || []);
+}
         });
         setUser(u);
         setDogs(u.dogs || []);
