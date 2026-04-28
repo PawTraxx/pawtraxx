@@ -2003,6 +2003,7 @@ if (!found) {
 }
       // Google auth account — allow manual login with any password, save it if not set
       // Google auth account — allow manual login with any password, save it if not set
+      delete found.banned;
 getUser(form.email).then(function(freshUser) {
   if (freshUser) found.banned = freshUser.banned;
   if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return;
