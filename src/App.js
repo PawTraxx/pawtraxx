@@ -7222,8 +7222,6 @@ if (isBanned) {
     "Your PawTraks account has been restored ✅",
     "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
   );
-}var isBanned = all[email].banned;
-var userName = all[email].name || "User";
 if (isBanned) {
   sendSimulatedEmail(
     email,
