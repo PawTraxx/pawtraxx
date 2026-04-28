@@ -1985,7 +1985,11 @@ if (!found) {
     if (!firebaseUser) { setErr("Invalid email or password."); return; }
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[firebaseUser.email] = firebaseUser;
-    signInUser(form.email, form.password);
+    signInUser(form.email, form.password).then(function(result) {
+  if (!result.success) {
+    registerWithFirebase(form.email, form.password);
+  }
+});
     onLogin(firebaseUser);
   });
   return;
@@ -1994,7 +1998,9 @@ if (!found) {
       if (found.googleAuth && (!found.password || found.password === "")) {
         found = Object.assign({}, found, { password: form.password });
         users[form.email] = found;
-        signInUser(form.email, form.password);
+        signInUser(form.email, form.password).then(function(result) {
+  if (!result.success) { registerWithFirebase(form.email, form.password); }
+});
         onLogin(found);
         return;
       }
@@ -2004,7 +2010,9 @@ if (!found) {
       }
       if (!found.googleAuth && (!found.password || found.password !== form.password)) { setErr("Invalid email or password."); return; }
       if (found.banned) { setErr("This account has been suspended. Please contact support."); return; }
-      signInUser(form.email, form.password);
+      signInUser(form.email, form.password).then(function(result) {
+  if (!result.success) { registerWithFirebase(form.email, form.password); }
+});
       onLogin(found);
     }
   }
