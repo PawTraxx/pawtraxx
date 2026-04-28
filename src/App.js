@@ -7207,6 +7207,119 @@ function AdminDashboard({ onExit }) {
     all[email] = Object.assign({}, all[email], { banned: !all[email].banned });
     localStorage.setItem("pt_users", JSON.stringify(all));
     saveUser(all[email]);
+    var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by an administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}var isBanned = all[email].banned;
+var userName = all[email].name || "User";
+if (isBanned) {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been suspended ⚠️",
+    "Hi " + userName + ",\n\nYour PawTraks account has been suspended by the administrator.\n\nIf you believe this is a mistake, please contact support.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+} else {
+  sendSimulatedEmail(
+    email,
+    "Your PawTraks account has been restored ✅",
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again. You must sign in with your username and password.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+  );
+}
     setConfirmBan(null);
     setRefresh(function(r){ return r+1; });
     if (selectedUser && selectedUser.email === email) setSelectedUser(all[email]);
