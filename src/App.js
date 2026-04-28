@@ -2007,6 +2007,8 @@ if (!found) {
 getUser(form.email).then(function(freshUser) {
   if (freshUser) found.banned = freshUser.banned;
   if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  users[form.email] = Object.assign({}, found);
+  localStorage.setItem("pt_users", JSON.stringify(users));
   if (found.googleAuth && (!found.password || found.password === "")) {
     found = Object.assign({}, found, { password: form.password });
     users[form.email] = found;
