@@ -1996,14 +1996,16 @@ if (!found) {
 }
       // Google auth account — allow manual login with any password, save it if not set
       if (found.googleAuth && (!found.password || found.password === "")) {
-        found = Object.assign({}, found, { password: form.password });
-        users[form.email] = found;
-        signInUser(form.email, form.password).then(function(result) {
-  if (!result.success) { registerWithFirebase(form.email, form.password); }
-});
-        onLogin(found);
-        return;
-      }
+  found = Object.assign({}, found, { password: form.password });
+  users[form.email] = found;
+  localStorage.setItem("pt_users", JSON.stringify(users));
+  signInUser(form.email, form.password).then(function(result) {
+    if (!result.success) { registerWithFirebase(form.email, form.password); }
+  });
+  if (found.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  onLogin(found);
+  return;
+}
       // Google auth account with password already set — verify it
       if (found.googleAuth && found.password && found.password !== form.password) {
         setErr("Invalid email or password."); return;
@@ -7932,14 +7934,14 @@ useEffect(function() {
   if (!user) return;
   var interval = setInterval(function() {
     getUser(user.email).then(function(firebaseUser) {
-      if (!firebaseUser) {
-        localStorage.removeItem("pt_session");
-        var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
-        delete all[user.email];
-        localStorage.setItem("pt_users", JSON.stringify(all));
-        setUser(null);
-        setDogs([]);
-      }
+      if (!firebaseUser || firebaseUser.banned) {
+  localStorage.removeItem("pt_session");
+  var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+  delete all[user.email];
+  localStorage.setItem("pt_users", JSON.stringify(all));
+  setUser(null);
+  setDogs([]);
+}
     });
   }, 30000);
   return function() { clearInterval(interval); };
