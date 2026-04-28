@@ -2027,8 +2027,8 @@ if (found.googleAuth && (!found.password || found.password === "")) {
 });
       onLogin(found);
     }
-  }
-
+  });
+}
   function confirmRegisterOtp() {
     setErr("");
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
