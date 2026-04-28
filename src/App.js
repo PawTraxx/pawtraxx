@@ -2002,14 +2002,17 @@ if (!found) {
   return;
 }
       // Google auth account — allow manual login with any password, save it if not set
-      if (found.googleAuth && (!found.password || found.password === "")) {
+      // Google auth account — allow manual login with any password, save it if not set
+getUser(form.email).then(function(freshUser) {
+if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+if (found.googleAuth && (!found.password || found.password === "")) {
   found = Object.assign({}, found, { password: form.password });
   users[form.email] = found;
   localStorage.setItem("pt_users", JSON.stringify(users));
   signInUser(form.email, form.password).then(function(result) {
     if (!result.success) { registerWithFirebase(form.email, form.password); }
   });
-  if (firebaseUser && firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   onLogin(found);
   return;
 }
@@ -2018,7 +2021,7 @@ if (!found) {
         setErr("Invalid email or password."); return;
       }
       if (!found.googleAuth && (!found.password || found.password !== form.password)) { setErr("Invalid email or password."); return; }
-      if (found.banned) { setErr("This account has been suspended. Please contact support."); return; }
+      if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
       signInUser(form.email, form.password).then(function(result) {
   if (!result.success) { registerWithFirebase(form.email, form.password); }
 });
