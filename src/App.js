@@ -1637,15 +1637,21 @@ function GoogleAuthModal({ onClose, onLogin }) {
     if (existingUser) {
       // Existing user — no invite code needed
       setStep("loading");
-      setTimeout(function() {
-        var gAccounts = JSON.parse(localStorage.getItem("pt_google_accounts") || "[]");
-        if (!gAccounts.find(function(a){ return a.email === email; })) {
-          gAccounts.unshift({ email: email, name: existingUser.name });
-          localStorage.setItem("pt_google_accounts", JSON.stringify(gAccounts.slice(0,5)));
-        }
-        if (existingUser.banned) { setStep("pick"); setErr("This account has been suspended. Please contact support."); return; }
-        onLogin(existingUser);
-      }, 1000);
+    setTimeout(function() {
+  var gAccounts = JSON.parse(localStorage.getItem("pt_google_accounts") || "[]");
+  if (!gAccounts.find(function(a){ return a.email === email; })) {
+    gAccounts.unshift({ email: email, name: existingUser.name });
+    localStorage.setItem("pt_google_accounts", JSON.stringify(gAccounts.slice(0,5)));
+  }
+  if (existingUser.banned) {
+    onClose();
+    setTimeout(function() {
+      alert("This account has been suspended. Please contact support.");
+    }, 300);
+    return;
+  }
+  onLogin(existingUser);
+}, 1000);
     } else {
       // New user — require invite code
       setPendingEmail(email);
