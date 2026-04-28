@@ -2025,6 +2025,9 @@ getUser(form.email).then(function(freshUser) {
   });
   onLogin(found);
 });
+
+}
+}
   function confirmRegisterOtp() {
     setErr("");
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
