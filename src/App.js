@@ -1643,6 +1643,7 @@ function GoogleAuthModal({ onClose, onLogin }) {
           gAccounts.unshift({ email: email, name: existingUser.name });
           localStorage.setItem("pt_google_accounts", JSON.stringify(gAccounts.slice(0,5)));
         }
+        if (existingUser.banned) { setStep("pick"); setErr("This account has been suspended. Please contact support."); return; }
         onLogin(existingUser);
       }, 1000);
     } else {
