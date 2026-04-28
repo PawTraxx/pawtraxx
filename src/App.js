@@ -7203,6 +7203,7 @@ function AdminDashboard({ onExit }) {
   });
 
   function toggleBan(email) {
+     setConfirmBan(null); // close modal first to prevent double clicks
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[email] = Object.assign({}, all[email], { banned: !all[email].banned });
     localStorage.setItem("pt_users", JSON.stringify(all));
