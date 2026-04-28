@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyALHLhCMc840OJMOl1joViz8HUaQqors_I",
@@ -55,6 +55,19 @@ export async function registerWithFirebase(email, password) {
 export async function sendPasswordReset(email) {
   try {
     await sendPasswordResetEmail(auth, email);
+    return { success: true };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+export async function signInUser(email, password) {
+  try {
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    return { success: true, user: cred.user };
+  } catch(e) { return { success: false, error: e.message }; }
+}
+
+export async function signOutUser() {
+  try {
+    await signOut(auth);
     return { success: true };
   } catch(e) { return { success: false, error: e.message }; }
 }
