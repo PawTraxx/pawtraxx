@@ -2004,31 +2004,27 @@ if (!found) {
       // Google auth account — allow manual login with any password, save it if not set
       // Google auth account — allow manual login with any password, save it if not set
 getUser(form.email).then(function(freshUser) {
-if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
-if (found.googleAuth && (!found.password || found.password === "")) {
-  found = Object.assign({}, found, { password: form.password });
-  users[form.email] = found;
-  localStorage.setItem("pt_users", JSON.stringify(users));
+  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  if (found.googleAuth && (!found.password || found.password === "")) {
+    found = Object.assign({}, found, { password: form.password });
+    users[form.email] = found;
+    localStorage.setItem("pt_users", JSON.stringify(users));
+    signInUser(form.email, form.password).then(function(result) {
+      if (!result.success) { registerWithFirebase(form.email, form.password); }
+    });
+    onLogin(found);
+    return;
+  }
+  if (found.googleAuth && found.password && found.password !== form.password) {
+    setErr("Invalid email or password."); return;
+  }
+  if (!found.googleAuth && (!found.password || found.password !== form.password)) { setErr("Invalid email or pa"); return; }
+  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   signInUser(form.email, form.password).then(function(result) {
     if (!result.success) { registerWithFirebase(form.email, form.password); }
   });
-  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   onLogin(found);
-  return;
-}
-      // Google auth account with password already set — verify it
-      if (found.googleAuth && found.password && found.password !== form.password) {
-        setErr("Invalid email or password."); return;
-      }
-      if (!found.googleAuth && (!found.password || found.password !== form.password)) { setErr("Invalid email or password."); return; }
-      if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
-      signInUser(form.email, form.password).then(function(result) {
-  if (!result.success) { registerWithFirebase(form.email, form.password); }
 });
-      onLogin(found);
-    }
-  });
-}
   function confirmRegisterOtp() {
     setErr("");
     if (otpInput !== generatedOtp) { setErr("Incorrect code. Try again."); return; }
