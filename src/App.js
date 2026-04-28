@@ -2006,7 +2006,7 @@ if (!found) {
       delete found.banned;
 getUser(form.email).then(function(freshUser) {
   if (freshUser) found.banned = freshUser.banned;
-  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return;
+  if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   if (found.googleAuth && (!found.password || found.password === "")) {
     found = Object.assign({}, found, { password: form.password });
     users[form.email] = found;
