@@ -2009,7 +2009,7 @@ if (!found) {
   signInUser(form.email, form.password).then(function(result) {
     if (!result.success) { registerWithFirebase(form.email, form.password); }
   });
-  if (found.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  if (firebaseUser && firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   onLogin(found);
   return;
 }
