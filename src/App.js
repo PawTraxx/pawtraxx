@@ -2138,7 +2138,6 @@ var toSave = Object.assign({}, users[resetEmail]);
 delete toSave.password;
 saveUser(toSave);
 removePasswordField(resetEmail);
-removePasswordField(resetEmail);
 var userName = users[resetEmail].name || "User";
 emailjs.send("service_8vv2754", "template_6eghfmo", {
   email: resetEmail, name: userName,
