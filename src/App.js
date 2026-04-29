@@ -2004,6 +2004,7 @@ if (!found) {
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[form.email] = Object.assign({}, firebaseUser, all[form.email]);
     localStorage.setItem("pt_users", JSON.stringify(all));
+    saveUser(all[form.email]);
     onLogin(firebaseUser);
   } else {
     setErr("Invalid email or password.");
