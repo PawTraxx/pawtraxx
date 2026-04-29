@@ -2001,11 +2001,16 @@ if (!found) {
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[firebaseUser.email] = firebaseUser;
    signInUser(form.email, form.password).then(function(result) {
-  if (!result.success) { registerWithFirebase(form.email, form.password); }
-  if (firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
-  onLogin(firebaseUser);
+  if (result.success) {
+    if (firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+    var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
+    all[form.email] = firebaseUser;
+    localStorage.setItem("pt_users", JSON.stringify(all));
+    onLogin(firebaseUser);
+  } else {
+    setErr("Invalid email or password.");
+  }
 });
-  });
   return;
 }
       // Google auth account — allow manual login with any password, save it if not set
