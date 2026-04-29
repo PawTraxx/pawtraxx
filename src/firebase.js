@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, deleteField } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -26,7 +26,11 @@ export async function saveUser(userData) {
     await setDoc(doc(db, 'users', userData.email), userData, { merge: true });
   } catch(e) { console.error('saveUser error:', e); }
 }
-
+export async function removePasswordField(email) {
+  try {
+    await setDoc(doc(db, 'users', email), { password: deleteField() }, { merge: true });
+  } catch(e) { console.error('removePasswordField error:', e); }
+}
 export async function getUser(email) {
   try {
     const snap = await getDoc(doc(db, 'users', email));
