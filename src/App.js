@@ -2002,7 +2002,7 @@ if (!found) {
   if (result.success) {
     if (firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    all[form.email] = firebaseUser;
+    all[form.email] = Object.assign({}, firebaseUser, all[form.email]);
     localStorage.setItem("pt_users", JSON.stringify(all));
     onLogin(firebaseUser);
   } else {
