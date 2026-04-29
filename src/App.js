@@ -2009,6 +2009,7 @@ if (!found) {
     setErr("Invalid email or password.");
   }
 });
+}); // close getUser
   return;
 }
       // Google auth account — allow manual login with any password, save it if not set
