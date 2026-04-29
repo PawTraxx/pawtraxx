@@ -2000,12 +2000,11 @@ if (!found) {
     if (!firebaseUser) { setErr("Invalid email or password."); return; }
     var all = JSON.parse(localStorage.getItem("pt_users") || "{}");
     all[firebaseUser.email] = firebaseUser;
-    signInUser(form.email, form.password).then(function(result) {
-  if (!result.success) {
-    registerWithFirebase(form.email, form.password);
-  }
+   signInUser(form.email, form.password).then(function(result) {
+  if (!result.success) { registerWithFirebase(form.email, form.password); }
+  if (firebaseUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
+  onLogin(firebaseUser);
 });
-    onLogin(firebaseUser);
   });
   return;
 }
