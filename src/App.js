@@ -2132,10 +2132,17 @@ function sendForgotOtp() {
     if (newPassword !== newPassword2) { setErr("Passwords don't match."); return; }
     if (newPassword.length < 6) { setErr("Password must be at least 6 characters."); return; }
     var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
-    users[resetEmail] = Object.assign({}, users[resetEmail], { password: newPassword });
-    localStorage.setItem("pt_users", JSON.stringify(users));
-    saveUser(user);
-    setMsg("Password updated! You can now sign in.");
+users[resetEmail] = Object.assign({}, users[resetEmail], { password: newPassword });
+localStorage.setItem("pt_users", JSON.stringify(users));
+var toSave = Object.assign({}, users[resetEmail]);
+delete toSave.password;
+saveUser(toSave);
+var userName = users[resetEmail].name || "User";
+emailjs.send("service_8vv2754", "template_6eghfmo", {
+  email: resetEmail, name: userName,
+  subject: "Your PawTraks password was changed ✅",
+  message: "Hi " + userName + ",\n\nYour PawTraks password was successfully changed.\n\nDate: " + new Date().toLocaleString() + "\n\nIf you didn't make this change, contact support immediately.\n\n— The PawTraks Team"
+}, "a7L6bdE9Il7_VufQq").catch(function(e){ console.error(e); });
     setMode("login");
     setForm(Object.assign({}, form, { email: resetEmail, password: "" }));
   }
