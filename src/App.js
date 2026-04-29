@@ -2096,14 +2096,25 @@ getUser(form.email).then(function(freshUser) {
 function sendForgotOtp() {
     setErr("");
     if (!resetEmail) { setErr("Enter your account email."); return; }
-    sendPasswordReset(resetEmail).then(function(result) {
-      if (result.success) {
-        setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
-        setMode("login");
-      } else {
-        setErr("Error: " + result.error);
-      }
-    });
+   sendPasswordReset(resetEmail).then(function(result) {
+  if (result.success) {
+    setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
+    setMode("login");
+  } else if (result.error && result.error.toString().includes("network")) {
+    setTimeout(function() {
+      sendPasswordReset(resetEmail).then(function(result2) {
+        if (result2.success) {
+          setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
+          setMode("login");
+        } else {
+          setErr("Error: " + result2.error);
+        }
+      });
+    }, 2000);
+  } else {
+    setErr("Error: " + result.error);
+  }
+});
 }
   function confirmResetOtp() {
     setErr("");
@@ -7220,7 +7231,7 @@ if (isBanned) {
   sendSimulatedEmail(
     email,
     "Your PawTraks account has been restored ✅",
-    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
+    "Hi " + userName + ",\n\nGood news! Your PawTraks account has been reinstated and you can now sign in again. You must sign in with your username and password.\n\nDate: " + new Date().toLocaleString() + "\n\n— The PawTraks Team"
   );
 }
     setConfirmBan(null);
