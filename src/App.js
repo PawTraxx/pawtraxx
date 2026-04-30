@@ -2044,6 +2044,11 @@ getUser(form.email).then(function(freshUser) {
       delete toSave.password;
       saveUser(toSave);
       onLogin(found);
+      emailjs.send("service_8vv2754", "template_6eghfmo", {
+  email: form.email, name: found.name || "User",
+  subject: "Your PawTraks password was changed ✅",
+  message: "Hi " + (found.name || "User") + ",\n\nYour PawTraks password was successfully changed.\n\nDate: " + new Date().toLocaleString() + "\n\nIf you didn't make this change, contact support immediately.\n\n— The PawTraks Team"
+}, "a7L6bdE9Il7_VufQq").catch(function(e){ console.error(e); });
     } else {
       setErr("Invalid email or password.");
     }
