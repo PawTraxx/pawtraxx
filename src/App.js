@@ -2120,7 +2120,13 @@ getUser(form.email).then(function(freshUser) {
 function sendForgotOtp() {
     setErr("");
     if (!resetEmail) { setErr("Enter your account email."); return; }
-   sendPasswordReset(resetEmail).then(function(result) {
+   var users = JSON.parse(localStorage.getItem("pt_users") || "{}");
+var existingUser = users[resetEmail];
+var oldPassword = existingUser ? existingUser.password : null;
+if (oldPassword) {
+  registerWithFirebase(resetEmail, oldPassword).catch(function(){});
+}
+sendPasswordReset(resetEmail).then(function(result) {
   if (result.success) {
     setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
     setMode("login");
