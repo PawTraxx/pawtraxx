@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, getDocs, deleteField } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, sendEmailVerification, sendPasswordResetEmail, signInWithEmailAndPassword, signOut, updatePassword } from 'firebase/auth';
 
 const firebaseConfig = {
   apiKey: "AIzaSyALHLhCMc840OJMOl1joViz8HUaQqors_I",
@@ -30,6 +30,15 @@ export async function removePasswordField(email) {
   try {
     await setDoc(doc(db, 'users', email), { password: deleteField() }, { merge: true });
   } catch(e) { console.error('removePasswordField error:', e); }
+}
+export async function updateUserPassword(newPassword) {
+  try {
+    if (auth.currentUser) {
+      await updatePassword(auth.currentUser, newPassword);
+      return { success: true };
+    }
+    return { success: false, error: "No user signed in" };
+  } catch(e) { return { success: false, error: e.message }; }
 }
 export async function getUser(email) {
   try {
