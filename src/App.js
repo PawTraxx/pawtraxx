@@ -2303,28 +2303,15 @@ emailjs.send("service_8vv2754", "template_6eghfmo", {
 
           {/* ── Forgot password: enter email + phone ── */}
           {mode === "forgot" && (
-            <div>
-              <button onClick={function(){ setMode("login"); setErr(""); }} style={{ background:"none",border:"none",color:C.muted,cursor:"pointer",fontSize:13,marginBottom:16,display:"flex",alignItems:"center",gap:4 }}>&#8592; Back to Sign In</button>
-              <p style={{ fontFamily:"Fraunces",fontSize:18,color:C.text,fontWeight:700,marginBottom:6 }}>Reset Password</p>
-              <p style={{ color:C.muted,fontSize:13,marginBottom:14 }}>Verify your identity to reset your password.</p>
-              <div style={{ display:"flex",gap:6,marginBottom:16,background:C.bg,borderRadius:10,padding:4 }}>
-              <button onClick={function(){ setResetMethod("email"); setErr(""); }}
-              style={{ flex:1,padding:"8px",borderRadius:7,border:"none",background:C.card,color:resetMethod==="email"?C.text:"transparent" }}>
-              📧 Via Email
-              </button>
-              </div>
-              {resetMethod === "email" && (
-                <FF label="Your Account Email"><input type="email" placeholder="you@email.com" value={resetEmail} onChange={function(e){ setResetEmail(e.target.value); }} onKeyDown={function(e){if(e.key==="Enter")sendForgotOtp();}} /></FF>
-              )}
-              {resetMethod === "email" && (
-                <p style={{ fontSize:12,color:C.muted,marginBottom:14,lineHeight:1.6,background:C.bg,borderRadius:8,padding:"10px 12px",border:"1px solid "+C.border }}>
-                  A password reset link will be sent to your registered email address. Click the link in the email to set a new password.
-                </p>
-              )}
-              {err && <p style={{ color:C.red,fontSize:13,marginBottom:12 }}>{err}</p>}
-              <button className="btnP" onClick={sendForgotOtp} style={{ width:"100%",padding:13,fontSize:15 }}>Send Code</button>
-            </div>
-          )}
+  <div>
+    <button onClick={function(){ setMode("login"); setErr(""); }} style={{ background:"none",border:"none",color:C.muted,fontSize:13,marginBottom:8,cursor:"pointer",padding:0 }}>← Back to Sign In</button>
+    <p style={{ fontFamily:"Fraunces",fontSize:18,color:C.text,fontWeight:700,marginBottom:6 }}>Reset Password</p>
+    <p style={{ color:C.muted,fontSize:13,marginBottom:14 }}>Enter your email and we'll send you a reset link.</p>
+    <FF label="Your Account Email"><input type="email" placeholder="you@email.com" value={resetEmail} onChange={function(e){ setResetEmail(e.target.value); }} style={{ width:"100%",padding:"10px 12px",borderRadius:8,border:"1.5px solid "+C.border,background:C.bg,color:C.text,fontSize:14 }} /></FF>
+    {err && <p style={{ color:C.red,fontSize:13,marginBottom:12 }}>{err}</p>}
+    <button className="btnP" onClick={sendForgotOtp} style={{ width:"100%",padding:13,fontSize:15 }}>Send Reset Link</button>
+  </div>
+)}
 
           {/* ── OTP verify for password reset ── */}
           {mode === "otp_reset" && (
