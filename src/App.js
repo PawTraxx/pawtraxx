@@ -2136,6 +2136,12 @@ users[resetEmail] = Object.assign({}, users[resetEmail], { password: newPassword
 localStorage.setItem("pt_users", JSON.stringify(users));
 var toSave = Object.assign({}, users[resetEmail]);
 delete toSave.password;
+var oldPassword = users[resetEmail] ? users[resetEmail].password : null;
+if (oldPassword) {
+  signInUser(resetEmail, oldPassword).then(function(result) {
+    if (result.success) { updateUserPassword(newPassword); }
+  });
+}
 saveUser(toSave);
 updateUserPassword(newPassword);
 removePasswordField(resetEmail);
