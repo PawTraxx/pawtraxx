@@ -2136,9 +2136,7 @@ if (oldPassword) {
     });
   });
   return;
-  } else {
-    setErr("Error: " + result.error);
-  }
+}
 });
 }
   function confirmResetOtp() {
