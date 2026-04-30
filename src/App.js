@@ -2034,7 +2034,22 @@ getUser(form.email).then(function(freshUser) {
   if (found.googleAuth && found.password && found.password !== form.password) {
     setErr("Invalid email or password."); return;
   }
-  if (!found.googleAuth && (!found.password || found.password !== form.password)) { setErr("Invalid email or pa"); return; }
+  if (!found.googleAuth && (!found.password || found.password !== form.password)) {
+  signInUser(form.email, form.password).then(function(result) {
+    if (result.success) {
+      found.password = form.password;
+      users[form.email] = Object.assign({}, found);
+      localStorage.setItem("pt_users", JSON.stringify(users));
+      var toSave = Object.assign({}, found);
+      delete toSave.password;
+      saveUser(toSave);
+      onLogin(found);
+    } else {
+      setErr("Invalid email or password.");
+    }
+  });
+  return;
+}
   if (freshUser && freshUser.banned) { setErr("This account has been suspended. Please contact support."); return; }
   signInUser(form.email, form.password).then(function(result) {
     if (!result.success) { registerWithFirebase(form.email, form.password); }
