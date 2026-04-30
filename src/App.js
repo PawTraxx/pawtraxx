@@ -2124,23 +2124,18 @@ function sendForgotOtp() {
 var existingUser = users[resetEmail];
 var oldPassword = existingUser ? existingUser.password : null;
 if (oldPassword) {
-  registerWithFirebase(resetEmail, oldPassword).catch(function(){});
-}
-sendPasswordReset(resetEmail).then(function(result) {
-  if (result.success) {
-    setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
-    setMode("login");
-  } else if (result.error && result.error.toString().includes("network")) {
-    setTimeout(function() {
-      sendPasswordReset(resetEmail).then(function(result2) {
-        if (result2.success) {
-          setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password.");
-          setMode("login");
-        } else {
-          setErr("Error: " + result2.error);
-        }
-      });
-    }, 2000);
+  registerWithFirebase(resetEmail, oldPassword).then(function() {
+    sendPasswordReset(resetEmail).then(function(result) {
+      if (result.success) { setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password."); setMode("login"); }
+      else { setErr("Error: " + result.error); }
+    });
+  }).catch(function() {
+    sendPasswordReset(resetEmail).then(function(result) {
+      if (result.success) { setMsg("A password reset email has been sent to " + resetEmail + ". Check your inbox and follow the link to reset your password."); setMode("login"); }
+      else { setErr("Error: " + result.error); }
+    });
+  });
+  return;
   } else {
     setErr("Error: " + result.error);
   }
